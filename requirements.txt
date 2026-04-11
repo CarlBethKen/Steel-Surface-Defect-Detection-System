@@ -9,3 +9,7 @@ sqlalchemy
 pydantic
 jinja2
 python-dateutil
+openmim
+mmengine
+mmcv>=2.0.0
+mmdet>=3.0.0

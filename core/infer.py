@@ -44,25 +44,51 @@ def load_models(yolo_path: str = None, fasterrcnn_path: str = None) -> Dict[str,
         print("ultralytics (YOLOv8) 未安装或加载失败，跳过 YOLO 模型加载。")
         models['yolov8m'] = None
 
-    # 加载 Faster R-CNN（mmdetection）
+    # 加载 Faster R-CNN（mmdetection 3.x）
     if fasterrcnn_path is None:
         fasterrcnn_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models', 'best_coco_bbox_mAP_epoch_10.pth')
 
     try:
         try:
-            # import mmdetection 相关
             from mmdet.apis import init_detector
+            import torch as _torch
+            from mmengine.config import Config as MmConfig
         except Exception:
             raise
 
-        # config 文件路径（如果项目中没有，可以跳过）
         config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'configs', 'faster_rcnn', 'faster-rcnn_r50_fpn_1x_coco.py')
         if os.path.exists(fasterrcnn_path) and os.path.exists(config_path):
             try:
-                models['fasterrcnn'] = init_detector(config_path, fasterrcnn_path, device='cpu')
+                # 从 checkpoint 中自动检测 num_classes 并修正 config
+                cfg = MmConfig.fromfile(config_path)
+                ckpt = _torch.load(fasterrcnn_path, map_location='cpu')
+                # mmdet checkpoint 通常在 state_dict 或直接是 state_dict
+                state_dict = ckpt.get('state_dict', ckpt)
+                # 通过 fc_cls 权重的 shape 推断类别数（num_classes + 1 for background in some versions）
+                fc_cls_key = None
+                for k in state_dict:
+                    if 'bbox_head.fc_cls' in k and 'weight' in k:
+                        fc_cls_key = k
+                        break
+                if fc_cls_key is not None:
+                    num_classes_from_ckpt = state_dict[fc_cls_key].shape[0]
+                    # mmdet 3.x: fc_cls output = num_classes + 1 (background)
+                    # 但如果用 sigmoid，则 output = num_classes
+                    # Faster R-CNN 默认用 softmax，所以 output = num_classes + 1
+                    inferred_num_classes = num_classes_from_ckpt - 1
+                    if inferred_num_classes < 1:
+                        inferred_num_classes = num_classes_from_ckpt
+                    current_num_classes = cfg.model.roi_head.bbox_head.get('num_classes', 80)
+                    if inferred_num_classes != current_num_classes:
+                        print(f"Config num_classes={current_num_classes}, checkpoint num_classes={inferred_num_classes}, 自动修正。")
+                        cfg.model.roi_head.bbox_head.num_classes = inferred_num_classes
+
+                models['fasterrcnn'] = init_detector(cfg, fasterrcnn_path, device='cpu')
                 print(f"Loaded Faster R-CNN model from: {fasterrcnn_path}")
             except Exception as e:
                 print(f"Failed to initialize Faster R-CNN from {fasterrcnn_path}: {e}")
+                import traceback
+                traceback.print_exc()
                 models['fasterrcnn'] = None
         else:
             if not os.path.exists(fasterrcnn_path):
@@ -72,6 +98,7 @@ def load_models(yolo_path: str = None, fasterrcnn_path: str = None) -> Dict[str,
             models['fasterrcnn'] = None
     except Exception:
         print("mmdetection (Faster R-CNN) 未安装或加载失败，跳过 Faster R-CNN 模型加载。")
+        print("请安装: pip install openmim && mim install mmengine mmcv mmdet")
         models['fasterrcnn'] = None
 
     return models
@@ -188,14 +215,36 @@ def run_infer(models: Dict[str, Any], image_input: Any, model_type: str = "yolov
             if model is None:
                 print("Requested model 'fasterrcnn' is not loaded. Skipping inference.")
                 return []
-            # mmdetection 推理：model.inference_detector
-            result = model.inference_detector(image_input)
-            # result 解析依赖于类别数量和输出格式，这里给出通用的占位解析
+            # mmdetection 3.x 推理
+            try:
+                from mmdet.apis import inference_detector
+            except ImportError:
+                print("mmdet.apis.inference_detector 不可用")
+                return []
+
+            result = inference_detector(model, image_input)
             detection_list = []
-            # 如果 result 是 list of ndarray，每个数组表示对应类别的 bbox
+
+            # mmdet 3.x 返回 DetDataSample 对象
+            try:
+                pred_instances = result.pred_instances
+                bboxes = pred_instances.bboxes.cpu().numpy()
+                scores = pred_instances.scores.cpu().numpy()
+                labels = pred_instances.labels.cpu().numpy()
+                for i in range(len(scores)):
+                    score = float(scores[i])
+                    if score < 0.01:
+                        continue
+                    bbox = [float(bboxes[i][j]) for j in range(4)]
+                    label = f"class_{int(labels[i])}"
+                    detection_list.append({"label": label, "score": score, "bbox": bbox})
+                return detection_list
+            except (AttributeError, TypeError):
+                pass
+
+            # 兼容 mmdet 2.x: result 是 list of ndarray
             try:
                 for cls_id, cls_bboxes in enumerate(result):
-                    # cls_bboxes: numpy array [N,5] -> x1,y1,x2,y2,score
                     for row in cls_bboxes:
                         score = float(row[4])
                         if score < 0.01:
@@ -204,7 +253,6 @@ def run_infer(models: Dict[str, Any], image_input: Any, model_type: str = "yolov
                         label = f"class_{cls_id}"
                         detection_list.append({"label": label, "score": score, "bbox": bbox})
             except Exception:
-                # 其他格式的 result，直接忽略并返回空
                 pass
             return detection_list
 
