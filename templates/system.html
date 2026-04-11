@@ -341,7 +341,11 @@
             钢铁缺陷检测系统
         </div>
         <div class="navbar-links">
-            <a class="active" onclick="switchTab(event, 'detect')">
+            <a class="active" onclick="switchTab(event, 'realtime')">
+                <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></svg>
+                实时监测
+            </a>
+            <a onclick="switchTab(event, 'detect')">
                 <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 1h-8C6.12 1 5 2.12 5 3.5v17C5 21.88 6.12 23 7.5 23h8c1.38 0 2.5-1.12 2.5-2.5v-17C18 2.12 16.88 1 15.5 1zm-4 21c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4.5-4H7V4h9v14z" fill="currentColor"/></svg>
                 检测
             </a>
@@ -357,8 +361,82 @@
     </div>
 
     <div class="system-container">
+        <!-- 实时监测页面 -->
+        <div id="realtime" class="section active">
+            <h1>
+                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></svg>
+                实时监测
+            </h1>
+
+            <!-- 控制面板 -->
+            <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap; margin-bottom: 24px;">
+                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
+                    <label>检测模型</label>
+                    <select id="rtModelSelect">
+                        <option value="yolov8m">YOLOv8m（best.pt）</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
+                    <label>检测频率</label>
+                    <select id="rtFpsSelect">
+                        <option value="2000">低（0.5 FPS）</option>
+                        <option value="1000" selected>中（1 FPS）</option>
+                        <option value="500">高（2 FPS）</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
+                    <label>置信度阈值</label>
+                    <select id="rtConfThreshold">
+                        <option value="0.25">0.25（宽松）</option>
+                        <option value="0.5" selected>0.50（标准）</option>
+                        <option value="0.75">0.75（严格）</option>
+                    </select>
+                </div>
+                <button id="rtStartBtn" class="btn btn-primary" onclick="toggleRealtime()" style="padding: 11px 28px; white-space: nowrap;">
+                    <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+                    启动监测
+                </button>
+            </div>
+
+            <!-- 视频画面 -->
+            <div style="position: relative; background: #1a1a1a; border-radius: 16px; overflow: hidden; max-width: 900px; margin: 0 auto;">
+                <video id="rtVideo" autoplay playsinline muted style="width: 100%; display: block; border-radius: 16px;"></video>
+                <canvas id="rtCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+                <!-- 状态指示器 -->
+                <div id="rtStatusBadge" style="position: absolute; top: 16px; left: 16px; background: rgba(0,0,0,0.6); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 0.85em; font-weight: 600; display: none;">
+                    <span id="rtStatusDot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-right: 6px; vertical-align: middle;"></span>
+                    <span id="rtStatusText">监测中</span>
+                </div>
+                <!-- 未启动时的占位 -->
+                <div id="rtPlaceholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #888; background: rgba(245,243,237,0.95); border-radius: 16px;">
+                    <svg style="width: 4em; height: 4em; opacity: 0.4; margin-bottom: 16px;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></svg>
+                    <p style="font-weight: 500;">点击「启动监测」开启摄像头实时检测</p>
+                </div>
+            </div>
+
+            <!-- 实时统计面板 -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 24px; max-width: 900px; margin-left: auto; margin-right: auto;">
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.2em; font-weight: bold; color: var(--primary); margin-bottom: 4px;" id="rtDefectCount">0</div>
+                    <div style="color: #666; font-weight: 600; font-size: 0.9em;">当前缺陷数</div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.2em; font-weight: bold; color: var(--primary); margin-bottom: 4px;" id="rtAvgConf">0%</div>
+                    <div style="color: #666; font-weight: 600; font-size: 0.9em;">平均置信度</div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div style="font-size: 2.2em; font-weight: bold; color: var(--primary); margin-bottom: 4px;" id="rtFrameCount">0</div>
+                    <div style="color: #666; font-weight: 600; font-size: 0.9em;">已检测帧数</div>
+                </div>
+                <div class="card" style="text-align: center;">
+                    <div id="rtLiveStatus" style="display: inline-block; background: var(--success); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.95em;">合格</div>
+                    <div style="color: #666; font-weight: 600; margin-top: 8px; font-size: 0.9em;">实时状态</div>
+                </div>
+            </div>
+        </div>
+
         <!-- 检测页面 -->
-        <div id="detect" class="section active">
+        <div id="detect" class="section">
             <h1>
                 <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" fill="none"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
                 缺陷检测
@@ -368,8 +446,6 @@
                 <label>选择检测模型</label>
                 <select id="modelSelect">
                     <option value="yolov8m">YOLOv8m（best.pt）</option>
-                    <option value="fasterrcnn">Faster R-CNN（best_coco_bbox_mAP_epoch_10.pth）</option>
-                    <option value="both">同时调用（YOLOv8 + Faster R-CNN）</option>
                 </select>
             </div>
 
@@ -858,6 +934,199 @@
 
             if (tabName === 'records') loadRecords();
             if (tabName === 'stats') loadStatistics();
+            // 离开实时监测页面时自动停止
+            if (tabName !== 'realtime' && rtRunning) {
+                stopRealtime();
+            }
+        }
+
+        // ==================== 实时监测功能 ====================
+
+        let rtRunning = false;
+        let rtStream = null;
+        let rtTimer = null;
+        let rtFrameTotal = 0;
+        let rtBusy = false; // 防止帧堆积
+
+        // 缺陷颜色映射（与后端 draw.py 保持一致）
+        const DEFECT_COLORS = [
+            '#FF0000', '#00FF00', '#0000FF', '#00FFFF',
+            '#FF00FF', '#FFA500', '#800080', '#008080', '#808080'
+        ];
+
+        function toggleRealtime() {
+            if (rtRunning) {
+                stopRealtime();
+            } else {
+                startRealtime();
+            }
+        }
+
+        async function startRealtime() {
+            try {
+                rtStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' },
+                    audio: false
+                });
+
+                const video = document.getElementById('rtVideo');
+                video.srcObject = rtStream;
+                await video.play();
+
+                // 等视频元数据加载完成后设置 canvas 尺寸
+                video.onloadedmetadata = () => {
+                    const canvas = document.getElementById('rtCanvas');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                };
+
+                rtRunning = true;
+                rtFrameTotal = 0;
+                rtBusy = false;
+                document.getElementById('rtPlaceholder').style.display = 'none';
+                document.getElementById('rtStatusBadge').style.display = 'block';
+                document.getElementById('rtStartBtn').innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12v12H6z" fill="currentColor"/></svg> 停止监测';
+                document.getElementById('rtStartBtn').style.background = 'var(--danger)';
+
+                // 启动定时检测
+                const interval = parseInt(document.getElementById('rtFpsSelect').value);
+                rtTimer = setInterval(captureAndDetect, interval);
+
+            } catch (err) {
+                console.error('摄像头启动失败:', err);
+                alert('无法访问摄像头，请检查权限设置。\n错误: ' + err.message);
+            }
+        }
+
+        function stopRealtime() {
+            rtRunning = false;
+
+            if (rtTimer) {
+                clearInterval(rtTimer);
+                rtTimer = null;
+            }
+
+            if (rtStream) {
+                rtStream.getTracks().forEach(t => t.stop());
+                rtStream = null;
+            }
+
+            const video = document.getElementById('rtVideo');
+            video.srcObject = null;
+
+            // 清空 canvas
+            const canvas = document.getElementById('rtCanvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            document.getElementById('rtPlaceholder').style.display = 'flex';
+            document.getElementById('rtStatusBadge').style.display = 'none';
+            document.getElementById('rtStartBtn').innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z" fill="currentColor"/></svg> 启动监测';
+            document.getElementById('rtStartBtn').style.background = '';
+        }
+
+        async function captureAndDetect() {
+            if (!rtRunning || rtBusy) return;
+            rtBusy = true;
+
+            const video = document.getElementById('rtVideo');
+            if (video.readyState < 2) { rtBusy = false; return; }
+
+            // 截帧到临时 canvas
+            const tmpCanvas = document.createElement('canvas');
+            tmpCanvas.width = video.videoWidth;
+            tmpCanvas.height = video.videoHeight;
+            const tmpCtx = tmpCanvas.getContext('2d');
+            tmpCtx.drawImage(video, 0, 0);
+            const frameBase64 = tmpCanvas.toDataURL('image/jpeg', 0.8);
+
+            const modelType = document.getElementById('rtModelSelect').value;
+            const confThreshold = parseFloat(document.getElementById('rtConfThreshold').value);
+
+            try {
+                const resp = await fetch(API_URL + '/detect/frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frame: frameBase64, model_type: modelType })
+                });
+                const data = await resp.json();
+
+                // 过滤低置信度
+                const detections = (data.detections || []).filter(d => d.score >= confThreshold);
+
+                // 绘制检测框
+                drawRealtimeOverlay(detections, video.videoWidth, video.videoHeight);
+
+                // 更新统计
+                rtFrameTotal++;
+                document.getElementById('rtFrameCount').textContent = rtFrameTotal;
+                document.getElementById('rtDefectCount').textContent = detections.length;
+
+                const avgConf = detections.length > 0
+                    ? (detections.reduce((s, d) => s + d.score, 0) / detections.length * 100).toFixed(1)
+                    : 0;
+                document.getElementById('rtAvgConf').textContent = avgConf + '%';
+
+                const statusEl = document.getElementById('rtLiveStatus');
+                if (detections.length === 0) {
+                    statusEl.textContent = '合格';
+                    statusEl.style.background = 'var(--success)';
+                    document.getElementById('rtStatusDot').style.background = 'var(--success)';
+                } else {
+                    statusEl.textContent = '发现缺陷';
+                    statusEl.style.background = 'var(--danger)';
+                    document.getElementById('rtStatusDot').style.background = 'var(--danger)';
+                }
+            } catch (err) {
+                console.error('帧检测失败:', err);
+            } finally {
+                rtBusy = false;
+            }
+        }
+
+        function drawRealtimeOverlay(detections, videoW, videoH) {
+            const canvas = document.getElementById('rtCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // 确保 canvas 尺寸与视频一致
+            if (canvas.width !== videoW || canvas.height !== videoH) {
+                canvas.width = videoW;
+                canvas.height = videoH;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            detections.forEach(det => {
+                const [x1, y1, x2, y2] = det.bbox;
+                const label = det.label || 'unknown';
+                const score = det.score || 0;
+
+                // 颜色
+                let colorIdx = 0;
+                if (label.startsWith('class_')) {
+                    colorIdx = parseInt(label.split('_')[1]) || 0;
+                }
+                const color = DEFECT_COLORS[colorIdx % DEFECT_COLORS.length];
+
+                // 画框
+                ctx.strokeStyle = color;
+                ctx.lineWidth = Math.max(2, Math.round(videoW / 400));
+                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+
+                // 标签背景
+                const text = `${label} ${(score * 100).toFixed(0)}%`;
+                const fontSize = Math.max(14, Math.round(videoW / 60));
+                ctx.font = `bold ${fontSize}px sans-serif`;
+                const textW = ctx.measureText(text).width;
+                const textH = fontSize + 4;
+
+                ctx.fillStyle = color;
+                ctx.fillRect(x1, y1 - textH - 2, textW + 8, textH + 2);
+
+                // 标签文字
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillText(text, x1 + 4, y1 - 5);
+            });
         }
     </script>
 </body>

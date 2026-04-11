@@ -3,6 +3,7 @@
 """
 import os
 import uuid
+import base64
 from typing import List
 from fastapi import FastAPI, UploadFile, File, Form, Depends, Query, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
@@ -11,6 +12,8 @@ from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 from sqlalchemy.orm import Session
 import zipfile
+import numpy as np
+import cv2
 from datetime import datetime
 
 from core.preprocess import preprocess_image
@@ -58,10 +61,83 @@ def records_page(request: Request):
 @app.get("/system", response_class=HTMLResponse)
 def system_page(request: Request):
     """系统主页面"""
-    return templates.TemplateResponse("system.html", {"request": request})
+    # return templates.TemplateResponse("system.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="system.html", context={})
 
 
 # ==================== 检测 API ====================
+
+@app.post("/detect/frame")
+async def detect_frame(request: Request, db: Session = Depends(get_db)):
+    """
+    实时视频帧检测
+    接收 base64 编码的图像帧，返回检测结果 JSON
+    检测到缺陷时自动保存记录到数据库
+    """
+    try:
+        body = await request.json()
+        frame_data = body.get("frame", "")
+        model_type = body.get("model_type", "yolov8m")
+        save_record_flag = body.get("save_record", True)
+
+        # 解码 base64 图像
+        if "," in frame_data:
+            frame_data = frame_data.split(",", 1)[1]
+        img_bytes = base64.b64decode(frame_data)
+        nparr = np.frombuffer(img_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        if img is None:
+            return JSONResponse({"detections": [], "error": "无法解码图像帧"})
+
+        # 推理
+        detections = run_infer(models, img, model_type=model_type)
+
+        record_id = None
+        result_url = None
+
+        # 检测到缺陷时保存记录
+        if detections and save_record_flag:
+            try:
+                file_id = str(uuid.uuid4())
+                ext = ".jpg"
+                upload_path = os.path.join(UPLOAD_DIR, f"{file_id}{ext}")
+                result_path = os.path.join(RESULT_DIR, f"{file_id}_result{ext}")
+
+                # 保存原始帧
+                cv2.imwrite(upload_path, img)
+
+                # 绘制检测结果
+                try:
+                    draw_detections(upload_path, result_path, detections)
+                except Exception as e:
+                    print(f"实时监测绘制结果出错: {e}")
+
+                # 写数据库
+                record = save_record(
+                    db=db,
+                    file_id=file_id,
+                    image_name=f"realtime_{file_id[:8]}{ext}",
+                    image_path=f"/static/uploads/{file_id}{ext}",
+                    result_image_path=f"/static/results/{file_id}_result{ext}",
+                    model_type=model_type,
+                    detections=detections,
+                )
+                if record:
+                    record_id = record.id
+                    result_url = f"/static/results/{file_id}_result{ext}"
+            except Exception as e:
+                print(f"实时监测保存记录出错: {e}")
+
+        return JSONResponse({
+            "detections": detections,
+            "defect_count": len(detections),
+            "record_id": record_id,
+            "result_url": result_url,
+        })
+    except Exception as e:
+        return JSONResponse({"detections": [], "error": str(e)})
+
 
 @app.post("/detect")
 async def detect(
