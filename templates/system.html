@@ -1,1134 +1,572 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>钢铁缺陷检测系统</title>
-    <style>
-        /* SVG 图标样式 */
-        .icon {
-            display: inline-block;
-            width: 1.2em;
-            height: 1.2em;
-            vertical-align: -0.2em;
-            fill: currentColor;
-            overflow: hidden;
-            margin-right: 6px;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>钢铁缺陷检测系统</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --g:rgba(255,255,255,.18);--gb:rgba(255,255,255,.32);--ghi:rgba(255,255,255,.48);
+  --blur:44px;
+  --ac:#0A84FF;--ac2:#5AC8FA;--acg:rgba(10,132,255,.14);
+  --ok:#30D158;--bad:#FF453A;--warn:#FF9F0A;
+  --t1:rgba(0,0,0,.86);--t2:rgba(0,0,0,.50);--t3:rgba(0,0,0,.28);
+  --xl:26px;--lg:18px;--md:12px;--sm:8px;
+}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;
+  min-height:100vh;padding:20px;overflow-x:hidden;
+  background:#efece6;
+  background-image:
+    radial-gradient(ellipse at 12% 42%,rgba(90,200,250,.15) 0%,transparent 55%),
+    radial-gradient(ellipse at 88% 12%,rgba(191,90,242,.11) 0%,transparent 50%),
+    radial-gradient(ellipse at 50% 88%,rgba(48,209,88,.09) 0%,transparent 50%),
+    radial-gradient(ellipse at 50% 50%,rgba(255,159,10,.06) 0%,transparent 60%);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+}
 
-        .icon-large {
-            width: 3em;
-            height: 3em;
-            margin: 0 auto 16px;
-            display: block;
-        }
+/* ═══ Glass ═══ */
+.gl{
+  background:var(--g);
+  backdrop-filter:blur(var(--blur)) saturate(180%);-webkit-backdrop-filter:blur(var(--blur)) saturate(180%);
+  border:1px solid var(--gb);
+  box-shadow:0 0 0 .5px rgba(255,255,255,.26) inset,0 8px 32px rgba(0,0,0,.045);
+  transition:all .35s cubic-bezier(.25,.46,.45,.94);
+}
+.gl:hover{background:rgba(255,255,255,.24);box-shadow:0 0 0 .5px rgba(255,255,255,.34) inset,0 12px 40px rgba(0,0,0,.06)}
 
-        .icon-sm {
-            width: 1em;
-            height: 1em;
-            margin-right: 4px;
-            vertical-align: -0.15em;
-            fill: currentColor;
-        }
-    </style>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+/* ═══ Icons (SF Symbols stroke style) ═══ */
+.i{display:inline-block;width:1.1em;height:1.1em;vertical-align:-.12em;flex-shrink:0}
+.ih{width:1.25em;height:1.25em;vertical-align:-.18em}
 
-        :root {
-            --primary: #5B9ECD;
-            --primary-light: #7BB0DB;
-            --primary-dark: #3B7EA8;
-            --success: #34C759;
-            --danger: #FF3B30;
-            --warning: #FF9500;
-            --light: #F5F5F7;
-            --border: #E5E5EA;
-            --text-primary: #000000;
-            --text-secondary: #3C3C43;
-            --text-tertiary: #8E8E93;
-        }
+/* ═══ Nav ═══ */
+.nv{max-width:1140px;margin:0 auto 24px;padding:10px 24px;border-radius:var(--xl);display:flex;justify-content:space-between;align-items:center;z-index:20;position:relative}
+.nv-b{font-size:1.22em;font-weight:700;color:var(--t1);letter-spacing:-.4px;display:flex;align-items:center;gap:6px}
+.nv-b .i{color:var(--ac)}
+.nv-t{display:flex;gap:2px}
+.nv-t a{
+  text-decoration:none;color:var(--t2);font-weight:500;font-size:.85em;
+  padding:7px 14px;border-radius:var(--md);cursor:pointer;
+  transition:all .22s ease;display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.nv-t a:hover{background:rgba(0,0,0,.04);color:var(--t1)}
+.nv-t a.on{background:var(--acg);color:var(--ac);font-weight:600}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
-            background: linear-gradient(180deg, #F5F3ED 0%, #EBE8E0 100%);
-            min-height: 100vh;
-            padding: 16px;
-            overflow-x: hidden;
-        }
+/* ═══ Layout ═══ */
+.wr{max-width:1140px;margin:0 auto}
+.sc{border-radius:var(--xl);padding:32px;display:none}
+.sc.on{display:block;animation:fu .4s ease}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.sc h1{font-size:1.5em;font-weight:700;color:var(--t1);letter-spacing:-.4px;margin-bottom:20px;display:flex;align-items:center;gap:6px}
+.sc h1 .i{color:var(--ac)}
+.stl{font-weight:600;color:var(--t1);font-size:.9em;margin-bottom:10px;display:flex;align-items:center;gap:5px}
 
-        .navbar {
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(30px) saturate(200%);
-            border: 1px solid rgba(255, 255, 255, 0.45);
-            padding: 14px 24px;
-            border-radius: 20px;
-            margin-bottom: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-            transition: all 0.25s ease;
-            position: relative;
-            z-index: 1;
-        }
+/* ═══ Card ═══ */
+.cd{
+  background:rgba(255,255,255,.20);backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px) saturate(150%);
+  border:1px solid rgba(255,255,255,.28);border-radius:var(--lg);padding:16px;
+  box-shadow:0 2px 10px rgba(0,0,0,.02),0 0 0 .5px rgba(255,255,255,.20) inset;
+  transition:all .3s ease;
+}
+.cd:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(0,0,0,.045),0 0 0 .5px rgba(255,255,255,.30) inset}
 
-        .navbar:hover {
-            background: rgba(255, 255, 255, 0.6);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        }
+/* ═══ Stat ═══ */
+.sn{font-size:2.1em;font-weight:700;letter-spacing:-.8px;background:linear-gradient(135deg,var(--ac),var(--ac2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.1}
+.sl{color:var(--t2);font-weight:600;font-size:.8em;margin-top:3px}
 
-        .navbar-brand {
-            font-size: 1.6em;
-            font-weight: 600;
-            color: var(--primary);
-            letter-spacing: -0.5px;
-        }
+/* ═══ Buttons ═══ */
+.bt{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:8px 18px;border:none;border-radius:var(--md);font-size:.86em;font-weight:600;
+  cursor:pointer;transition:all .28s cubic-bezier(.25,.46,.45,.94);
+  letter-spacing:-.1px;-webkit-font-smoothing:antialiased;
+  backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);
+}
+.bt:active{transform:scale(.97)!important}
+.b1{background:rgba(10,132,255,.68);color:#fff;border:1px solid rgba(255,255,255,.16);box-shadow:0 2px 10px rgba(10,132,255,.16),0 0 0 .5px rgba(255,255,255,.10) inset}
+.b1:hover{background:rgba(10,132,255,.80);transform:translateY(-1px);box-shadow:0 4px 16px rgba(10,132,255,.22)}
+.bd{background:rgba(255,69,58,.55);color:#fff;border:1px solid rgba(255,255,255,.12);box-shadow:0 2px 8px rgba(255,69,58,.10)}
+.bd:hover{background:rgba(255,69,58,.70);transform:translateY(-1px)}
+.bg{background:rgba(255,255,255,.20);color:var(--t2);border:1px solid rgba(255,255,255,.28);box-shadow:0 1px 4px rgba(0,0,0,.02),0 0 0 .5px rgba(255,255,255,.16) inset}
+.bg:hover{background:rgba(255,255,255,.34);color:var(--t1)}
 
-        .navbar-links {
-            display: flex;
-            gap: 6px;
-        }
+/* ═══ Form ═══ */
+.fg{margin-bottom:14px}
+.fg>label{display:block;margin-bottom:4px;color:var(--t2);font-weight:600;font-size:.8em}
 
-        .navbar-links a {
-            text-decoration: none;
-            color: var(--text-secondary);
-            font-weight: 500;
-            padding: 8px 14px;
-            border-radius: 12px;
-            transition: all 0.25s ease;
-            cursor: pointer;
-            font-size: 0.93em;
-            background: transparent;
-            border: none;
-        }
+/* ═══ Custom Glass Select ═══ */
+.gs{position:relative}
+.gs-trigger{
+  width:100%;padding:8px 12px;font-size:.86em;font-weight:500;color:var(--t1);
+  border:1px solid rgba(255,255,255,.30);border-radius:var(--sm);cursor:pointer;
+  background:rgba(255,255,255,.24);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 1px 3px rgba(0,0,0,.02),0 0 0 .5px rgba(255,255,255,.16) inset;
+  transition:all .2s ease;display:flex;align-items:center;justify-content:space-between;gap:6px;
+  user-select:none;
+}
+.gs-trigger:hover{border-color:rgba(10,132,255,.25)}
+.gs-trigger.open{border-color:rgba(10,132,255,.45);box-shadow:0 0 0 3px rgba(10,132,255,.10)}
+.gs-trigger svg{width:10px;height:10px;opacity:.45;flex-shrink:0;transition:transform .2s}
+.gs-trigger.open svg{transform:rotate(180deg)}
+.gs-pop{
+  position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:100;
+  padding:5px;border-radius:var(--md);
+  background:rgba(255,255,255,.58);backdrop-filter:blur(50px) saturate(200%);-webkit-backdrop-filter:blur(50px) saturate(200%);
+  border:1px solid rgba(255,255,255,.45);
+  box-shadow:0 10px 40px rgba(0,0,0,.12),0 0 0 .5px rgba(255,255,255,.35) inset;
+  display:none;max-height:220px;overflow-y:auto;
+}
+.gs-pop.show{display:block;animation:fu .2s ease}
+.gs-opt{
+  padding:7px 11px;border-radius:var(--sm);font-size:.85em;font-weight:500;color:var(--t1);
+  cursor:pointer;transition:all .12s ease;display:flex;align-items:center;gap:6px;
+}
+.gs-opt:hover{background:rgba(10,132,255,.10)}
+.gs-opt.sel{background:rgba(10,132,255,.14);color:var(--ac);font-weight:600}
+.gs-opt.sel::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ac);flex-shrink:0}
 
-        .navbar-links a:hover {
-            background: rgba(0, 0, 0, 0.05);
-            color: var(--primary);
-        }
+/* ═══ Upload ═══ */
+.up{
+  border:1.5px dashed rgba(10,132,255,.20);border-radius:var(--lg);padding:46px 28px;
+  text-align:center;cursor:pointer;transition:all .35s ease;
+  background:rgba(10,132,255,.025);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+}
+.up:hover{background:rgba(10,132,255,.06);border-color:rgba(10,132,255,.38);box-shadow:0 0 0 4px rgba(10,132,255,.06)}
 
-        .navbar-links a.active {
-            background: rgba(91, 158, 205, 0.15);
-            color: var(--primary);
-            font-weight: 600;
-        }
+/* ═══ Badge ═══ */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;padding:5px 15px;border-radius:50px;
+  font-weight:600;font-size:.86em;color:#fff;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.16);transition:all .3s ease;
+}
+.badge-ok{background:rgba(48,209,88,.55);box-shadow:0 2px 8px rgba(48,209,88,.14)}
+.badge-bad{background:rgba(255,69,58,.55);box-shadow:0 2px 8px rgba(255,69,58,.14)}
 
-        .system-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 1;
-        }
+/* ═══ Video ═══ */
+.vid{
+  position:relative;border-radius:var(--lg);overflow:hidden;max-width:860px;margin:0 auto;
+  background:rgba(255,255,255,.06);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.20);box-shadow:0 4px 20px rgba(0,0,0,.04),0 0 0 .5px rgba(255,255,255,.16) inset;
+}
 
-        .section {
-            background: rgba(255, 255, 255, 0.5);
-            backdrop-filter: blur(30px) saturate(200%);
-            border: 1px solid rgba(255, 255, 255, 0.45);
-            border-radius: 24px;
-            padding: 32px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-            display: none;
-            transition: all 0.25s ease;
-        }
+/* ═══ Calendar ═══ */
+.cal-trigger{
+  width:100%;padding:8px 12px;font-size:.86em;font-weight:500;color:var(--t1);
+  border:1px solid rgba(255,255,255,.30);border-radius:var(--sm);cursor:pointer;
+  background:rgba(255,255,255,.24);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  box-shadow:0 1px 3px rgba(0,0,0,.02),0 0 0 .5px rgba(255,255,255,.16) inset;
+  transition:all .2s ease;display:flex;align-items:center;gap:6px;
+}
+.cal-trigger:hover{border-color:rgba(10,132,255,.3)}
+.cal-trigger.active{border-color:rgba(10,132,255,.45);box-shadow:0 0 0 3px rgba(10,132,255,.10)}
+.cal-pop{
+  position:absolute;top:calc(100% + 6px);left:0;z-index:100;
+  width:280px;padding:14px;border-radius:var(--lg);
+  background:rgba(255,255,255,.55);backdrop-filter:blur(50px) saturate(200%);-webkit-backdrop-filter:blur(50px) saturate(200%);
+  border:1px solid rgba(255,255,255,.45);
+  box-shadow:0 12px 48px rgba(0,0,0,.12),0 0 0 .5px rgba(255,255,255,.35) inset;
+  display:none;
+}
+.cal-pop.show{display:block;animation:fu .25s ease}
+.cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding:0 2px}
+.cal-head span{font-weight:700;font-size:.9em;color:var(--t1)}
+.cal-head button{
+  background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.3);
+  border-radius:8px;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.cal-head button:hover{background:rgba(255,255,255,.4)}
+.cal-head button svg{width:14px;height:14px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.cal-grid .cal-wk{font-size:.7em;font-weight:600;color:var(--t3);padding:4px 0}
+.cal-grid .cal-d{
+  font-size:.82em;font-weight:500;padding:6px 0;border-radius:8px;cursor:pointer;
+  transition:all .15s ease;color:var(--t1);
+}
+.cal-grid .cal-d:hover{background:rgba(10,132,255,.10)}
+.cal-grid .cal-d.today{font-weight:700;color:var(--ac)}
+.cal-grid .cal-d.sel{background:rgba(10,132,255,.65);color:#fff;font-weight:600}
+.cal-grid .cal-d.other{color:var(--t3)}
+.cal-grid .cal-d.range{background:rgba(10,132,255,.08)}
 
-        .section.active {
-            display: block;
-        }
+/* ═══ Misc ═══ */
+.spin{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(10,132,255,.08);border-top-color:var(--ac);border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:60px 20px;color:var(--t3)}
 
-        .section:hover {
-            background: rgba(255, 255, 255, 0.55);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        }
-
-        .section h1 {
-            color: var(--primary);
-            margin-bottom: 24px;
-            font-size: 1.9em;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.45);
-            backdrop-filter: blur(25px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 18px;
-            padding: 18px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-            transition: all 0.25s ease;
-        }
-
-        .card:hover {
-            background: rgba(255, 255, 255, 0.55);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-            transform: translateY(-1px);
-        }
-
-        .upload-area {
-            border: 2px dashed rgba(91, 158, 205, 0.3);
-            border-radius: 18px;
-            padding: 48px 32px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            background: rgba(91, 158, 205, 0.08);
-            backdrop-filter: blur(15px);
-        }
-
-        .upload-area:hover {
-            background: rgba(91, 158, 205, 0.12);
-            border-color: var(--primary);
-            box-shadow: 0 4px 16px rgba(91, 158, 205, 0.12);
-        }
-
-        .upload-area input[type="file"] {
-            display: none;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--text-primary);
-            font-weight: 500;
-            font-size: 0.93em;
-            letter-spacing: -0.2px;
-        }
-
-        .form-group select {
-            width: 100%;
-            padding: 11px 14px;
-            border: 1.5px solid rgba(91, 158, 205, 0.15);
-            border-radius: 12px;
-            font-size: 0.95em;
-            background: rgba(255, 255, 255, 0.6);
-            backdrop-filter: blur(15px);
-            color: var(--text-primary);
-            font-weight: 500;
-            transition: all 0.25s ease;
-        }
-
-        .form-group select:hover {
-            border-color: rgba(91, 158, 205, 0.3);
-            background: rgba(255, 255, 255, 0.75);
-        }
-
-        .form-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 0 0 3px rgba(91, 158, 205, 0.08);
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 16px;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 11px 24px;
-            border: none;
-            border-radius: 12px;
-            font-size: 0.95em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            text-decoration: none;
-            text-align: center;
-            letter-spacing: -0.2px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-            color: white;
-            border: none;
-            box-shadow: 0 4px 12px rgba(91, 158, 205, 0.25);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(91, 158, 205, 0.3);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0px);
-            box-shadow: 0 2px 8px rgba(91, 158, 205, 0.2);
-        }
-
-        .btn-block {
-            display: block;
-            width: 100%;
-            margin-top: 16px;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-tertiary);
-        }
-
-        .empty-icon {
-            font-size: 3.5em;
-            margin-bottom: 16px;
-            opacity: 0.6;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            border: 2.5px solid rgba(91, 158, 205, 0.15);
-            border-top-color: var(--primary);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .navbar {
-                flex-direction: column;
-                gap: 12px;
-                padding: 12px 16px;
-            }
-
-            .navbar-links {
-                flex-direction: column;
-                gap: 6px;
-                width: 100%;
-            }
-
-            .navbar-links a {
-                padding: 10px;
-                text-align: center;
-            }
-
-            .section {
-                padding: 20px;
-                border-radius: 20px;
-            }
-
-            .upload-area {
-                padding: 36px 20px;
-            }
-
-            .section h1 {
-                font-size: 1.6em;
-            }
-        }
-    </style>
+@media(max-width:768px){
+  body{padding:12px}
+  .nv{flex-direction:column;gap:10px;padding:12px 14px}
+  .nv-t{width:100%;justify-content:center;flex-wrap:wrap}
+  .sc{padding:20px 16px;border-radius:var(--lg)}
+  .sc h1{font-size:1.25em}.sn{font-size:1.6em}
+  .cal-pop{width:260px;left:-20px}
+}
+</style>
 </head>
 <body>
-    <!-- 导航栏 -->
-    <div class="navbar">
-        <div class="navbar-brand">
-            <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13 10V3L4 14h7v7l9-11h-7z" fill="currentColor"/></svg>
-            钢铁缺陷检测系统
-        </div>
-        <div class="navbar-links">
-            <a class="active" onclick="switchTab(event, 'realtime')">
-                <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></svg>
-                实时监测
-            </a>
-            <a onclick="switchTab(event, 'detect')">
-                <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 1h-8C6.12 1 5 2.12 5 3.5v17C5 21.88 6.12 23 7.5 23h8c1.38 0 2.5-1.12 2.5-2.5v-17C18 2.12 16.88 1 15.5 1zm-4 21c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4.5-4H7V4h9v14z" fill="currentColor"/></svg>
-                检测
-            </a>
-            <a onclick="switchTab(event, 'records')">
-                <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h4l3 3 3-3h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-5 12h-2v2h2v-2zm0-6h-2v5h2V8z" fill="currentColor"/></svg>
-                记录
-            </a>
-            <a onclick="switchTab(event, 'stats')">
-                <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2V17zm4 0h-2V7h2V17zm4 0h-2v-4h2V17z" fill="currentColor"/></svg>
-                统计
-            </a>
-        </div>
+
+<!-- ═══ Nav ═══ -->
+<nav class="nv gl">
+  <div class="nv-b">钢铁缺陷检测系统</div>
+  <div class="nv-t">
+    <a class="on" onclick="go(event,'realtime')">
+      <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg>
+      实时监测
+    </a>
+    <a onclick="go(event,'detect')">
+      <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      图片检测
+    </a>
+    <a onclick="go(event,'records')">
+      <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      历史记录
+    </a>
+    <a onclick="go(event,'stats')">
+      <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      统计分析
+    </a>
+  </div>
+</nav>
+
+<div class="wr">
+
+<!-- ════ 实时监测 ════ -->
+<div id="realtime" class="sc gl on">
+  <h1><svg class="i ih" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49"/></svg>实时监测</h1>
+  <div style="display:flex;gap:11px;align-items:end;flex-wrap:wrap;margin-bottom:20px">
+    <div class="fg" style="margin-bottom:0;flex:1;min-width:155px"><label>检测模型</label><div class="gs" data-id="rtModelSelect"><div class="gs-trigger" onclick="gsToggle(this)"><span>YOLOv8m（best.pt）</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="gs-pop"><div class="gs-opt sel" data-val="yolov8m" onclick="gsPick(this)">YOLOv8m（best.pt）</div></div></div></div>
+    <div class="fg" style="margin-bottom:0;flex:1;min-width:155px"><label>检测频率</label><div class="gs" data-id="rtFpsSelect"><div class="gs-trigger" onclick="gsToggle(this)"><span>中（1 FPS）</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="gs-pop"><div class="gs-opt" data-val="2000" onclick="gsPick(this)">低（0.5 FPS）</div><div class="gs-opt sel" data-val="1000" onclick="gsPick(this)">中（1 FPS）</div><div class="gs-opt" data-val="500" onclick="gsPick(this)">高（2 FPS）</div></div></div></div>
+    <div class="fg" style="margin-bottom:0;flex:1;min-width:155px"><label>置信度阈值</label><div class="gs" data-id="rtConfThreshold"><div class="gs-trigger" onclick="gsToggle(this)"><span>0.50（标准）</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="gs-pop"><div class="gs-opt" data-val="0.25" onclick="gsPick(this)">0.25（宽松）</div><div class="gs-opt sel" data-val="0.5" onclick="gsPick(this)">0.50（标准）</div><div class="gs-opt" data-val="0.75" onclick="gsPick(this)">0.75（严格）</div></div></div></div>
+    <button id="rtStartBtn" class="bt b1" onclick="toggleRt()" style="padding:8px 24px;white-space:nowrap">
+      <svg class="i" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>启动监测
+    </button>
+  </div>
+  <div class="vid">
+    <video id="rtVideo" autoplay playsinline muted style="width:100%;display:block"></video>
+    <canvas id="rtCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none"></canvas>
+    <div id="rtBadge" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,.45);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);color:#fff;padding:5px 12px;border-radius:50px;font-size:.78em;font-weight:600;display:none;border:1px solid rgba(255,255,255,.1)">
+      <span id="rtDot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px;vertical-align:middle"></span><span id="rtTxt">监测中</span>
     </div>
-
-    <div class="system-container">
-        <!-- 实时监测页面 -->
-        <div id="realtime" class="section active">
-            <h1>
-                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></svg>
-                实时监测
-            </h1>
-
-            <!-- 控制面板 -->
-            <div style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap; margin-bottom: 24px;">
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
-                    <label>检测模型</label>
-                    <select id="rtModelSelect">
-                        <option value="yolov8m">YOLOv8m（best.pt）</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
-                    <label>检测频率</label>
-                    <select id="rtFpsSelect">
-                        <option value="2000">低（0.5 FPS）</option>
-                        <option value="1000" selected>中（1 FPS）</option>
-                        <option value="500">高（2 FPS）</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 180px;">
-                    <label>置信度阈值</label>
-                    <select id="rtConfThreshold">
-                        <option value="0.25">0.25（宽松）</option>
-                        <option value="0.5" selected>0.50（标准）</option>
-                        <option value="0.75">0.75（严格）</option>
-                    </select>
-                </div>
-                <button id="rtStartBtn" class="btn btn-primary" onclick="toggleRealtime()" style="padding: 11px 28px; white-space: nowrap;">
-                    <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
-                    启动监测
-                </button>
-            </div>
-
-            <!-- 视频画面 -->
-            <div style="position: relative; background: #1a1a1a; border-radius: 16px; overflow: hidden; max-width: 900px; margin: 0 auto;">
-                <video id="rtVideo" autoplay playsinline muted style="width: 100%; display: block; border-radius: 16px;"></video>
-                <canvas id="rtCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
-                <!-- 状态指示器 -->
-                <div id="rtStatusBadge" style="position: absolute; top: 16px; left: 16px; background: rgba(0,0,0,0.6); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 0.85em; font-weight: 600; display: none;">
-                    <span id="rtStatusDot" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-right: 6px; vertical-align: middle;"></span>
-                    <span id="rtStatusText">监测中</span>
-                </div>
-                <!-- 未启动时的占位 -->
-                <div id="rtPlaceholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #888; background: rgba(245,243,237,0.95); border-radius: 16px;">
-                    <svg style="width: 4em; height: 4em; opacity: 0.4; margin-bottom: 16px;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" fill="currentColor"/></svg>
-                    <p style="font-weight: 500;">点击「启动监测」开启摄像头实时检测</p>
-                </div>
-            </div>
-
-            <!-- 实时统计面板 -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-top: 24px; max-width: 900px; margin-left: auto; margin-right: auto;">
-                <div class="card" style="text-align: center;">
-                    <div style="font-size: 2.2em; font-weight: bold; color: var(--primary); margin-bottom: 4px;" id="rtDefectCount">0</div>
-                    <div style="color: #666; font-weight: 600; font-size: 0.9em;">当前缺陷数</div>
-                </div>
-                <div class="card" style="text-align: center;">
-                    <div style="font-size: 2.2em; font-weight: bold; color: var(--primary); margin-bottom: 4px;" id="rtAvgConf">0%</div>
-                    <div style="color: #666; font-weight: 600; font-size: 0.9em;">平均置信度</div>
-                </div>
-                <div class="card" style="text-align: center;">
-                    <div style="font-size: 2.2em; font-weight: bold; color: var(--primary); margin-bottom: 4px;" id="rtFrameCount">0</div>
-                    <div style="color: #666; font-weight: 600; font-size: 0.9em;">已检测帧数</div>
-                </div>
-                <div class="card" style="text-align: center;">
-                    <div id="rtLiveStatus" style="display: inline-block; background: var(--success); color: white; padding: 6px 14px; border-radius: 20px; font-weight: 600; font-size: 0.95em;">合格</div>
-                    <div style="color: #666; font-weight: 600; margin-top: 8px; font-size: 0.9em;">实时状态</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 检测页面 -->
-        <div id="detect" class="section">
-            <h1>
-                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" fill="none"/><path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-                缺陷检测
-            </h1>
-
-            <div class="form-group">
-                <label>选择检测模型</label>
-                <select id="modelSelect">
-                    <option value="yolov8m">YOLOv8m（best.pt）</option>
-                </select>
-            </div>
-
-            <!-- 上传区域 - 支持单/批量/文件夹上传 -->
-            <div class="upload-area" id="uploadArea" style="text-align: center;">
-                <svg class="icon-large" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" opacity="0.6"/></svg>
-                <p><strong>点击或拖拽上传图像</strong></p>
-                <p style="font-size: 0.9em; color: #999; margin-top: 10px;">支持单张、批量或整个文件夹上传，JPG、PNG、BMP 格式</p>
-                <input type="file" id="imageInput" accept="image/*" multiple webkitdirectory mozdirectory msdirectory odirectory directory onchange="handleImageSelect()" style="display:none;">
-                <input type="file" id="imageInputFallback" accept="image/*" multiple onchange="handleImageSelect()" style="display:none;">
-            </div>
-
-            <!-- 检测进度 -->
-            <div id="detectingLoader" style="display: none; text-align: center; margin-top: 30px;">
-                <div class="loading" style="display: inline-block; margin-bottom: 15px;"></div>
-                <p id="detectingStatus">正在检测，请稍候...</p>
-            </div>
-
-            <!-- 检测结果 - 滑动浏览模式 -->
-            <div id="detectionResults" style="display: none; margin-top: 30px;">
-                <!-- 导航栏 -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <button class="btn" style="background: transparent; color: var(--text-secondary); padding: 8px 12px; border: 1px solid var(--border);" onclick="prevImage()" title="上一张">
-                        <svg style="width: 1.2em; height: 1.2em; fill: currentColor;" viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-                    </button>
-                    <div style="flex: 1; text-align: center; color: var(--text-secondary); font-weight: 600;">
-                        <span id="imageCounter">1 / 1</span>
-                    </div>
-                    <button class="btn" style="background: transparent; color: var(--text-secondary); padding: 8px 12px; border: 1px solid var(--border);" onclick="nextImage()" title="下一张">
-                        <svg style="width: 1.2em; height: 1.2em; fill: currentColor;" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
-                    </button>
-                </div>
-
-                <!-- 图片显示（仅显示标注图） -->
-                <div style="margin-bottom: 20px;">
-                    <div style="position: relative; background: #f5f5f5; border-radius: 12px; overflow: hidden; max-width: 800px; margin: 0 auto;">
-                        <img id="currentResultImage" src="" alt="检测结果" style="width: 100%; max-width: 800px; height: auto; display: block; border-radius: 12px;">
-                    </div>
-                </div>
-
-                <!-- 统计信息 -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                    <div class="card" style="text-align: center;">
-                        <div style="font-size: 2.5em; font-weight: bold; color: var(--primary); margin-bottom: 5px;" id="currentDefectCount">0</div>
-                        <div style="color: #666; font-weight: 600;">缺陷数量</div>
-                    </div>
-                    <div class="card" style="text-align: center;">
-                        <div style="font-size: 2.5em; font-weight: bold; color: var(--primary); margin-bottom: 5px;" id="currentAvgConfidence">0%</div>
-                        <div style="color: #666; font-weight: 600;">平均置信度</div>
-                    </div>
-                    <div class="card" style="text-align: center;">
-                        <div id="currentDefectStatus" style="display: inline-block; background: var(--success); color: white; padding: 8px 16px; border-radius: 20px; font-weight: 600;">合格</div>
-                        <div style="color: #666; font-weight: 600; margin-top: 10px;">检测状态</div>
-                    </div>
-                </div>
-
-                <!-- 操作按钮 -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
-                    <button class="btn btn-primary" onclick="exportCurrentImage()" style="padding: 10px 16px;">
-                        <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2z" fill="currentColor"/></svg>
-                        导出当前图
-                    </button>
-                    <button class="btn btn-primary" onclick="exportAllImages()" style="padding: 10px 16px;">
-                        <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor"/></svg>
-                        批量导出
-                    </button>
-                    <button class="btn" style="background: var(--danger); color: white; padding: 10px 16px;" onclick="clearDetection()">
-                        <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" fill="currentColor"/></svg>
-                        重新检测
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 记录页面 -->
-        <div id="records" class="section">
-            <h1>
-                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z" fill="currentColor"/></svg>
-                历史记录
-            </h1>
-            <p style="color: #666; margin-bottom: 20px;">查看所有检测历史记录，支持批量删除</p>
-
-            <!-- 操作按钮 -->
-            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                <button class="btn btn-primary" onclick="loadRecords()" style="padding: 10px 20px;">
-                    <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" fill="currentColor"/></svg>
-                    刷新列表
-                </button>
-                <button id="selectAllBtn" class="btn" style="background: var(--border); color: var(--text-secondary); padding: 10px 20px; border: 1px solid var(--border);" onclick="toggleSelectAll()">
-                    <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="currentColor"/></svg>
-                    全选
-                </button>
-                <button id="batchDeleteBtn" class="btn" style="background: var(--danger); color: white; padding: 10px 20px; display: none;" onclick="batchDeleteRecords()">
-                    <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-9l-1 1H5v2h14V4z" fill="currentColor"/></svg>
-                    批量删除
-                </button>
-            </div>
-
-            <div id="recordsList" style="margin-top: 20px;">
-                <div class="empty-state">
-                    <svg class="icon-large" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h4l3 3 3-3h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="currentColor" opacity="0.2"/></svg>
-                    <p>暂无记录</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 统计页面 -->
-        <div id="stats" class="section">
-            <h1>
-                <svg class="icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2V17zm4 0h-2V7h2V17zm4 0h-2v-4h2V17z" fill="currentColor"/></svg>
-                统计分析
-            </h1>
-            <div class="grid" style="margin-bottom: 30px;">
-                <div class="card" style="text-align: center;">
-                    <div style="font-size: 2em; font-weight: bold; color: var(--primary);" id="totalRecords">0</div>
-                    <div style="color: #666; margin-top: 10px;">总检测数</div>
-                </div>
-                <div class="card" style="text-align: center;">
-                    <div style="font-size: 2em; font-weight: bold; color: var(--primary);" id="totalDefects">0</div>
-                    <div style="color: #666; margin-top: 10px;">缺陷总数</div>
-                </div>
-                <div class="card" style="text-align: center;">
-                    <div style="font-size: 2em; font-weight: bold; color: var(--primary);" id="avgConfidenceStat">0%</div>
-                    <div style="color: #666; margin-top: 10px;">平均置信度</div>
-                </div>
-            </div>
-            <button class="btn btn-primary" onclick="loadStatistics()" style="padding: 10px 20px;">
-                <svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z" fill="currentColor"/></svg>
-                刷新数据
-            </button>
-        </div>
+    <div id="rtPh" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;color:var(--t3);background:rgba(255,255,255,.40);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:var(--lg)">
+      <svg style="width:2.8em;height:2.8em;opacity:.25;margin-bottom:10px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/><path d="M16.24 7.76a6 6 0 010 8.49m-8.48-.01a6 6 0 010-8.49m11.31-2.82a10 10 0 010 14.14m-14.14 0a10 10 0 010-14.14"/></svg>
+      <p style="font-weight:500;font-size:.88em">点击「启动监测」开启摄像头实时检测</p>
     </div>
-
-    <script>
-        const API_URL = window.location.origin;
-
-        // 全局状态
-        let currentImageIndex = 0;
-        let detectionResults = [];
-        let allRecords = [];
-        let selectedRecordIds = [];
-
-        document.addEventListener('DOMContentLoaded', () => {
-            setupUploadArea();
-            loadStatistics();
-        });
-
-        // ==================== 上传功能 ====================
-
-        function setupUploadArea() {
-            const uploadArea = document.getElementById('uploadArea');
-            const imageInput = document.getElementById('imageInput');
-
-            uploadArea.addEventListener('click', () => imageInput.click());
-
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.style.background = 'rgba(91, 158, 205, 0.15)';
-                uploadArea.style.borderColor = 'var(--primary)';
-            });
-
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.style.background = 'rgba(91, 158, 205, 0.08)';
-                uploadArea.style.borderColor = 'rgba(91, 158, 205, 0.3)';
-            });
-
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.style.background = 'rgba(91, 158, 205, 0.08)';
-                uploadArea.style.borderColor = 'rgba(91, 158, 205, 0.3)';
-                if (e.dataTransfer.files.length) {
-                    imageInput.files = e.dataTransfer.files;
-                    handleImageSelect();
-                }
-            });
-        }
-
-        // 处理图像选择（单/批量）
-        async function handleImageSelect() {
-            const imageInput = document.getElementById('imageInput');
-            const files = imageInput.files;
-
-            if (!files || files.length === 0) return;
-
-            const model = document.getElementById('modelSelect').value;
-            document.getElementById('detectingLoader').style.display = 'block';
-            document.getElementById('detectingStatus').textContent = `正在检测 ${files.length} 张图片...`;
-            document.getElementById('detectionResults').style.display = 'none';
-
-            detectionResults = [];
-
-            try {
-                // 逐个检测每张图片
-                for (let i = 0; i < files.length; i++) {
-                    document.getElementById('detectingStatus').textContent = `正在检测第 ${i+1}/${files.length} 张图片...`;
-                    const result = await detectSingleImageAndReturn(files[i], model);
-                    if (result) {
-                        detectionResults.push(result);
-                        // 实时显示检测结果
-                        if (i === 0) {
-                            currentImageIndex = 0;
-                            displayDetectionResults();
-                        } else {
-                            updateCurrentImageDisplay();
-                        }
-                    }
-                }
-
-                if (detectionResults.length === 0) {
-                    throw new Error('所有图片检测失败');
-                }
-            } catch (error) {
-                console.error('检测失败:', error);
-                document.getElementById('detectingLoader').style.display = 'none';
-                alert('检测失败：' + error.message);
-            }
-        }
-
-        // 单张检测并返回结果
-        async function detectSingleImageAndReturn(file, model) {
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('model_type', model);
-
-            try {
-                const response = await fetch(API_URL + '/detect', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error(`服务器错误: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                return data;
-            } catch (error) {
-                console.error('检测失败:', error);
-                return null;
-            }
-        }
-
-        // 单张检测
-        async function detectSingleImage(file, model) {
-            const formData = new FormData();
-            formData.append('image', file);
-            formData.append('model_type', model);
-
-            try {
-                const response = await fetch(API_URL + '/detect', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!response.ok) {
-                    throw new Error(`服务器错误: ${response.status} ${response.statusText}`);
-                }
-
-                const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                detectionResults = [data];
-                currentImageIndex = 0;
-                displayDetectionResults();
-            } catch (error) {
-                console.error('单张检测失败:', error);
-                document.getElementById('detectingLoader').style.display = 'none';
-                alert('检测失败：' + error.message);
-                throw error;
-            }
-        }
-
-
-        // ==================== 图片浏览功能 ====================
-
-        function displayDetectionResults() {
-            document.getElementById('detectingLoader').style.display = 'none';
-            document.getElementById('detectionResults').style.display = 'block';
-            updateCurrentImageDisplay();
-            loadStatistics();
-        }
-
-        function updateCurrentImageDisplay() {
-            if (!detectionResults.length) return;
-
-            const current = detectionResults[currentImageIndex];
-            document.getElementById('currentResultImage').src = current.result_url;
-            document.getElementById('imageCounter').textContent = `${currentImageIndex + 1} / ${detectionResults.length}`;
-
-            const detections = current.detections || [];
-            const defectCount = detections.length;
-            const avgConfidence = defectCount > 0
-                ? (detections.reduce((sum, d) => sum + d.score, 0) / defectCount * 100).toFixed(1)
-                : 0;
-
-            document.getElementById('currentDefectCount').textContent = defectCount;
-            document.getElementById('currentAvgConfidence').textContent = avgConfidence + '%';
-
-            const statusEl = document.getElementById('currentDefectStatus');
-            if (defectCount === 0) {
-                statusEl.innerHTML = '<svg style="width: 1.2em; height: 1.2em; margin-right: 6px; vertical-align: -2px;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" fill="currentColor"/></svg>合格';
-                statusEl.style.background = 'var(--success)';
-            } else {
-                statusEl.innerHTML = '<svg style="width: 1.2em; height: 1.2em; margin-right: 6px; vertical-align: -2px;" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>不合格';
-                statusEl.style.background = 'var(--danger)';
-            }
-        }
-
-        function prevImage() {
-            if (currentImageIndex > 0) {
-                currentImageIndex--;
-                updateCurrentImageDisplay();
-            }
-        }
-
-        function nextImage() {
-            if (currentImageIndex < detectionResults.length - 1) {
-                currentImageIndex++;
-                updateCurrentImageDisplay();
-            }
-        }
-
-        // ==================== 导出功能 ====================
-
-        function exportCurrentImage() {
-            if (!detectionResults.length) {
-                alert('没有检测结果');
-                return;
-            }
-
-            const current = detectionResults[currentImageIndex];
-            const link = document.createElement('a');
-            link.href = current.result_url;
-            link.download = `detection_result_${currentImageIndex + 1}.jpg`;
-            link.click();
-        }
-
-        function exportAllImages() {
-            if (!detectionResults.length) {
-                alert('没有检测结果');
-                return;
-            }
-
-            // 创建一个隐藏的表单进行批量导出
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = API_URL + '/api/export/batch';
-
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'file_ids';
-            input.value = JSON.stringify(detectionResults.map(r => r.file_id));
-            form.appendChild(input);
-
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-        }
-
-        // ==================== 清除功能 ====================
-
-        function clearDetection() {
-            document.getElementById('imageInput').value = '';
-            document.getElementById('detectionResults').style.display = 'none';
-            detectionResults = [];
-            currentImageIndex = 0;
-        }
-
-        // ==================== 记录管理功能 ====================
-
-        function loadRecords() {
-            fetch(API_URL + '/api/records')
-                .then(r => r.json())
-                .then(data => {
-                    allRecords = data.records || [];
-                    selectedRecordIds = [];
-                    const list = document.getElementById('recordsList');
-
-                    if (!allRecords.length) {
-                        list.innerHTML = '<div class="empty-state"><svg class="icon-large" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h4l3 3 3-3h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="currentColor" opacity="0.2"/></svg><p>暂无记录</p></div>';
-                        document.getElementById('batchDeleteBtn').style.display = 'none';
-                        return;
-                    }
-
-                    list.innerHTML = allRecords.map(r => `
-                        <div class="card" style="margin-bottom: 15px; padding: 15px; display: grid; grid-template-columns: auto 100px 1fr auto; gap: 15px; align-items: center;">
-                            <input type="checkbox" class="record-checkbox" value="${r.id}" onchange="updateBatchDeleteButton()" style="width: 20px; height: 20px; cursor: pointer;">
-                            <img src="${r.image_path}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 6px;">
-                            <div>
-                                <h3>${r.image_name}</h3>
-                                <p style="color: #999; font-size: 0.9em;">${r.created_at} | 模型${r.model_type} | ${r.defect_count}个缺陷</p>
-                            </div>
-                            <button class="btn" style="background: var(--danger); color: white; padding: 8px 16px; font-size: 0.9em;" onclick="deleteRecord(${r.id})">删除</button>
-                        </div>
-                    `).join('');
-                })
-                .catch(() => alert('加载失败'));
-        }
-
-        function toggleSelectAll() {
-            const checkboxes = document.querySelectorAll('.record-checkbox');
-            const allSelected = Array.from(checkboxes).every(cb => cb.checked);
-
-            checkboxes.forEach(cb => {
-                cb.checked = !allSelected;
-            });
-
-            updateBatchDeleteButton();
-        }
-
-        function updateBatchDeleteButton() {
-            const checkboxes = document.querySelectorAll('.record-checkbox:checked');
-            selectedRecordIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-            const btn = document.getElementById('batchDeleteBtn');
-            if (selectedRecordIds.length > 0) {
-                btn.style.display = 'inline-block';
-                btn.textContent = `✓ 批量删除 (${selectedRecordIds.length})`;
-            } else {
-                btn.style.display = 'none';
-            }
-        }
-
-        function batchDeleteRecords() {
-            if (!selectedRecordIds.length) {
-                alert('请先选择要删除的记录');
-                return;
-            }
-
-            if (!confirm(`确定删除这 ${selectedRecordIds.length} 条记录吗？`)) {
-                return;
-            }
-
-            fetch(API_URL + '/api/records/batch', {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ record_ids: selectedRecordIds })
-            })
-            .then(r => r.json())
-            .then(data => {
-                alert(data.message || '删除成功');
-                loadRecords();
-                loadStatistics();
-            })
-            .catch(() => alert('删除失败'));
-        }
-
-        function deleteRecord(id) {
-            if (!confirm('确定删除此记录吗？')) return;
-            fetch(API_URL + `/api/records/${id}`, { method: 'DELETE' })
-                .then(() => { loadRecords(); loadStatistics(); })
-                .catch(() => alert('删除失败'));
-        }
-
-        // ==================== 统计功能 ====================
-
-        function loadStatistics() {
-            fetch(API_URL + '/api/statistics')
-                .then(r => r.json())
-                .then(data => {
-                    document.getElementById('totalRecords').textContent = data.total_records;
-                    document.getElementById('totalDefects').textContent = data.total_defects;
-                    document.getElementById('avgConfidenceStat').textContent = (data.average_confidence * 100).toFixed(1) + '%';
-                })
-                .catch(() => {});
-        }
-
-        // ==================== 标签页切换 ====================
-
-        function switchTab(event, tabName) {
-            if (event) {
-                event.target.parentElement.querySelectorAll('a').forEach(a => a.classList.remove('active'));
-                event.target.classList.add('active');
-            }
-
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(tabName).classList.add('active');
-
-            if (tabName === 'records') loadRecords();
-            if (tabName === 'stats') loadStatistics();
-            // 离开实时监测页面时自动停止
-            if (tabName !== 'realtime' && rtRunning) {
-                stopRealtime();
-            }
-        }
-
-        // ==================== 实时监测功能 ====================
-
-        let rtRunning = false;
-        let rtStream = null;
-        let rtTimer = null;
-        let rtFrameTotal = 0;
-        let rtBusy = false; // 防止帧堆积
-
-        // 缺陷颜色映射（与后端 draw.py 保持一致）
-        const DEFECT_COLORS = [
-            '#FF0000', '#00FF00', '#0000FF', '#00FFFF',
-            '#FF00FF', '#FFA500', '#800080', '#008080', '#808080'
-        ];
-
-        function toggleRealtime() {
-            if (rtRunning) {
-                stopRealtime();
-            } else {
-                startRealtime();
-            }
-        }
-
-        async function startRealtime() {
-            try {
-                rtStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'environment' },
-                    audio: false
-                });
-
-                const video = document.getElementById('rtVideo');
-                video.srcObject = rtStream;
-                await video.play();
-
-                // 等视频元数据加载完成后设置 canvas 尺寸
-                video.onloadedmetadata = () => {
-                    const canvas = document.getElementById('rtCanvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                };
-
-                rtRunning = true;
-                rtFrameTotal = 0;
-                rtBusy = false;
-                document.getElementById('rtPlaceholder').style.display = 'none';
-                document.getElementById('rtStatusBadge').style.display = 'block';
-                document.getElementById('rtStartBtn').innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 6h12v12H6z" fill="currentColor"/></svg> 停止监测';
-                document.getElementById('rtStartBtn').style.background = 'var(--danger)';
-
-                // 启动定时检测
-                const interval = parseInt(document.getElementById('rtFpsSelect').value);
-                rtTimer = setInterval(captureAndDetect, interval);
-
-            } catch (err) {
-                console.error('摄像头启动失败:', err);
-                alert('无法访问摄像头，请检查权限设置。\n错误: ' + err.message);
-            }
-        }
-
-        function stopRealtime() {
-            rtRunning = false;
-
-            if (rtTimer) {
-                clearInterval(rtTimer);
-                rtTimer = null;
-            }
-
-            if (rtStream) {
-                rtStream.getTracks().forEach(t => t.stop());
-                rtStream = null;
-            }
-
-            const video = document.getElementById('rtVideo');
-            video.srcObject = null;
-
-            // 清空 canvas
-            const canvas = document.getElementById('rtCanvas');
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            document.getElementById('rtPlaceholder').style.display = 'flex';
-            document.getElementById('rtStatusBadge').style.display = 'none';
-            document.getElementById('rtStartBtn').innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z" fill="currentColor"/></svg> 启动监测';
-            document.getElementById('rtStartBtn').style.background = '';
-        }
-
-        async function captureAndDetect() {
-            if (!rtRunning || rtBusy) return;
-            rtBusy = true;
-
-            const video = document.getElementById('rtVideo');
-            if (video.readyState < 2) { rtBusy = false; return; }
-
-            // 截帧到临时 canvas
-            const tmpCanvas = document.createElement('canvas');
-            tmpCanvas.width = video.videoWidth;
-            tmpCanvas.height = video.videoHeight;
-            const tmpCtx = tmpCanvas.getContext('2d');
-            tmpCtx.drawImage(video, 0, 0);
-            const frameBase64 = tmpCanvas.toDataURL('image/jpeg', 0.8);
-
-            const modelType = document.getElementById('rtModelSelect').value;
-            const confThreshold = parseFloat(document.getElementById('rtConfThreshold').value);
-
-            try {
-                const resp = await fetch(API_URL + '/detect/frame', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ frame: frameBase64, model_type: modelType })
-                });
-                const data = await resp.json();
-
-                // 过滤低置信度
-                const detections = (data.detections || []).filter(d => d.score >= confThreshold);
-
-                // 绘制检测框
-                drawRealtimeOverlay(detections, video.videoWidth, video.videoHeight);
-
-                // 更新统计
-                rtFrameTotal++;
-                document.getElementById('rtFrameCount').textContent = rtFrameTotal;
-                document.getElementById('rtDefectCount').textContent = detections.length;
-
-                const avgConf = detections.length > 0
-                    ? (detections.reduce((s, d) => s + d.score, 0) / detections.length * 100).toFixed(1)
-                    : 0;
-                document.getElementById('rtAvgConf').textContent = avgConf + '%';
-
-                const statusEl = document.getElementById('rtLiveStatus');
-                if (detections.length === 0) {
-                    statusEl.textContent = '合格';
-                    statusEl.style.background = 'var(--success)';
-                    document.getElementById('rtStatusDot').style.background = 'var(--success)';
-                } else {
-                    statusEl.textContent = '发现缺陷';
-                    statusEl.style.background = 'var(--danger)';
-                    document.getElementById('rtStatusDot').style.background = 'var(--danger)';
-                }
-            } catch (err) {
-                console.error('帧检测失败:', err);
-            } finally {
-                rtBusy = false;
-            }
-        }
-
-        function drawRealtimeOverlay(detections, videoW, videoH) {
-            const canvas = document.getElementById('rtCanvas');
-            const ctx = canvas.getContext('2d');
-
-            // 确保 canvas 尺寸与视频一致
-            if (canvas.width !== videoW || canvas.height !== videoH) {
-                canvas.width = videoW;
-                canvas.height = videoH;
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            detections.forEach(det => {
-                const [x1, y1, x2, y2] = det.bbox;
-                const label = det.label || 'unknown';
-                const score = det.score || 0;
-
-                // 颜色
-                let colorIdx = 0;
-                if (label.startsWith('class_')) {
-                    colorIdx = parseInt(label.split('_')[1]) || 0;
-                }
-                const color = DEFECT_COLORS[colorIdx % DEFECT_COLORS.length];
-
-                // 画框
-                ctx.strokeStyle = color;
-                ctx.lineWidth = Math.max(2, Math.round(videoW / 400));
-                ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-
-                // 标签背景
-                const text = `${label} ${(score * 100).toFixed(0)}%`;
-                const fontSize = Math.max(14, Math.round(videoW / 60));
-                ctx.font = `bold ${fontSize}px sans-serif`;
-                const textW = ctx.measureText(text).width;
-                const textH = fontSize + 4;
-
-                ctx.fillStyle = color;
-                ctx.fillRect(x1, y1 - textH - 2, textW + 8, textH + 2);
-
-                // 标签文字
-                ctx.fillStyle = '#FFFFFF';
-                ctx.fillText(text, x1 + 4, y1 - 5);
-            });
-        }
-    </script>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:11px;margin-top:18px;max-width:860px;margin-left:auto;margin-right:auto">
+    <div class="cd" style="text-align:center"><div class="sn" id="rtDC">0</div><div class="sl">当前缺陷数</div></div>
+    <div class="cd" style="text-align:center"><div class="sn" id="rtAC">0%</div><div class="sl">平均置信度</div></div>
+    <div class="cd" style="text-align:center"><div class="sn" id="rtFC">0</div><div class="sl">已检测帧数</div></div>
+    <div class="cd" style="text-align:center"><div id="rtSt" class="badge badge-ok">合格</div><div class="sl" style="margin-top:6px">实时状态</div></div>
+  </div>
+</div>
+
+<!-- ════ 图片检测 ════ -->
+<div id="detect" class="sc gl">
+  <h1><svg class="i ih" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2.5"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><path d="M21 15l-5-5L5 21"/></svg>图片检测</h1>
+  <div class="fg"><label>选择检测模型</label><div class="gs" data-id="modelSelect"><div class="gs-trigger" onclick="gsToggle(this)"><span>YOLOv8m（best.pt）</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="gs-pop"><div class="gs-opt sel" data-val="yolov8m" onclick="gsPick(this)">YOLOv8m（best.pt）</div></div></div></div>
+  <div class="up" id="uploadArea">
+    <svg style="width:2.4em;height:2.4em;opacity:.30;margin:0 auto 10px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <p style="font-weight:600;color:var(--t1);font-size:.92em">点击或拖拽上传图像</p>
+    <p style="font-size:.8em;color:var(--t3);margin-top:5px">支持单张、批量或文件夹上传 · JPG / PNG / BMP</p>
+    <input type="file" id="imageInput" accept="image/*" multiple webkitdirectory mozdirectory directory onchange="handleImg()" style="display:none">
+  </div>
+  <div id="loader" style="display:none;text-align:center;margin-top:28px"><div class="spin" style="margin-bottom:10px"></div><p id="loaderTxt" style="color:var(--t2);font-weight:500;font-size:.88em">正在检测...</p></div>
+  <div id="results" style="display:none;margin-top:26px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <button class="bt bg" onclick="prevImg()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <span id="imgCtr" style="color:var(--t2);font-weight:600;font-size:.86em">1 / 1</span>
+      <button class="bt bg" onclick="nextImg()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
+    <div style="margin-bottom:16px"><div style="background:rgba(255,255,255,.12);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.20);border-radius:var(--lg);overflow:hidden;max-width:760px;margin:0 auto;box-shadow:0 4px 18px rgba(0,0,0,.04)"><img id="resImg" src="" style="width:100%;display:block"></div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:11px;margin-bottom:16px">
+      <div class="cd" style="text-align:center"><div class="sn" id="resDC">0</div><div class="sl">缺陷数量</div></div>
+      <div class="cd" style="text-align:center"><div class="sn" id="resAC">0%</div><div class="sl">平均置信度</div></div>
+      <div class="cd" style="text-align:center"><div id="resSt" class="badge badge-ok">合格</div><div class="sl" style="margin-top:6px">检测状态</div></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="bt b1" onclick="expCur()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>导出当前图</button>
+      <button class="bt b1" onclick="expAll()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>批量导出</button>
+      <button class="bt bg" onclick="clrDet()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>重新上传</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ 历史记录 ════ -->
+<div id="records" class="sc gl">
+  <h1><svg class="i ih" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>历史记录</h1>
+  <p style="color:var(--t3);margin-bottom:16px;font-size:.86em">查看所有检测历史记录</p>
+  <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <button class="bt b1" onclick="loadRec()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>刷新</button>
+    <button id="selBtn" class="bt bg" onclick="selAll()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>全选</button>
+    <button id="delBtn" class="bt bd" style="display:none" onclick="batchDel()"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>批量删除</button>
+  </div>
+  <div id="recList"><div class="empty"><svg style="width:2.2em;height:2.2em;opacity:.18;margin:0 auto 10px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><p style="font-weight:500">暂无记录</p></div></div>
+</div>
+
+<!-- ════ 统计分析 ════ -->
+<div id="stats" class="sc gl">
+  <h1><svg class="i ih" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>统计分析</h1>
+
+  <!-- 筛选 -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:end">
+    <div class="fg" style="margin-bottom:0;min-width:115px"><label>快捷范围</label>
+      <div class="gs" data-id="sRange"><div class="gs-trigger" onclick="gsToggle(this)"><span>全部</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="gs-pop"><div class="gs-opt sel" data-val="all" onclick="gsPick(this);onRange()">全部</div><div class="gs-opt" data-val="today" onclick="gsPick(this);onRange()">今天</div><div class="gs-opt" data-val="7d" onclick="gsPick(this);onRange()">近 7 天</div><div class="gs-opt" data-val="30d" onclick="gsPick(this);onRange()">近 30 天</div><div class="gs-opt" data-val="custom" onclick="gsPick(this);onRange()">自定义日期</div></div></div>
+    </div>
+    <div class="fg" style="margin-bottom:0;min-width:130px;position:relative;display:none" id="dfWrap">
+      <label>开始日期</label>
+      <div class="cal-trigger" id="dfTrig" onclick="toggleCal('df')">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span id="dfLabel">选择日期</span>
+      </div>
+      <div class="cal-pop" id="dfCal"></div>
+    </div>
+    <div class="fg" style="margin-bottom:0;min-width:130px;position:relative;display:none" id="dtWrap">
+      <label>结束日期</label>
+      <div class="cal-trigger" id="dtTrig" onclick="toggleCal('dt')">
+        <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span id="dtLabel">选择日期</span>
+      </div>
+      <div class="cal-pop" id="dtCal"></div>
+    </div>
+    <div class="fg" style="margin-bottom:0;min-width:115px"><label>检测来源</label>
+      <div class="gs" data-id="sSrc"><div class="gs-trigger" onclick="gsToggle(this)"><span>全部</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="gs-pop"><div class="gs-opt sel" data-val="" onclick="gsPick(this);loadStats()">全部</div><div class="gs-opt" data-val="upload" onclick="gsPick(this);loadStats()">图片检测</div><div class="gs-opt" data-val="realtime" onclick="gsPick(this);loadStats()">实时监测</div></div></div>
+    </div>
+  </div>
+
+  <!-- 总览 -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:11px;margin-bottom:24px">
+    <div class="cd" style="text-align:center"><div class="sn" id="stTot">0</div><div class="sl">总检测数</div></div>
+    <div class="cd" style="text-align:center"><div class="sn" id="stDef">0</div><div class="sl">缺陷总数</div></div>
+    <div class="cd" style="text-align:center"><div class="sn" id="stAvg">0%</div><div class="sl">平均置信度</div></div>
+    <div class="cd" style="text-align:center"><div class="sn" id="stRate">0%</div><div class="sl">缺陷率</div></div>
+  </div>
+
+  <!-- 缺陷分布 -->
+  <div style="margin-bottom:24px">
+    <div class="stl"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/></svg>缺陷类型分布</div>
+    <div id="distEl" style="display:flex;gap:9px;flex-wrap:wrap"><span style="color:var(--t3);font-size:.84em">暂无数据</span></div>
+  </div>
+
+  <!-- 每日趋势 -->
+  <div>
+    <div class="stl"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>每日检测趋势</div>
+    <div id="dayEl"><div style="color:var(--t3);font-size:.84em;padding:16px 0;text-align:center">暂无数据</div></div>
+  </div>
+</div>
+
+</div><!-- /wr -->
+
+<script>
+const U=window.location.origin;
+let ci=0,dr=[],ar=[],si=[];
+
+document.addEventListener('DOMContentLoaded',()=>{initUpload();loadStats();document.addEventListener('click',e=>{if(!e.target.closest('#dfWrap'))hideCal('df');if(!e.target.closest('#dtWrap'))hideCal('dt');document.querySelectorAll('.gs').forEach(g=>{if(!g.contains(e.target)){g.querySelector('.gs-pop').classList.remove('show');g.querySelector('.gs-trigger').classList.remove('open')}})})});
+
+// ═══ Glass Select ═══
+function gsToggle(trig){
+  const gs=trig.closest('.gs'),pop=gs.querySelector('.gs-pop'),isOpen=pop.classList.contains('show');
+  // close all others
+  document.querySelectorAll('.gs-pop.show').forEach(p=>{p.classList.remove('show');p.previousElementSibling.classList.remove('open')});
+  if(!isOpen){pop.classList.add('show');trig.classList.add('open')}
+}
+function gsPick(opt){
+  const gs=opt.closest('.gs');
+  gs.querySelectorAll('.gs-opt').forEach(o=>o.classList.remove('sel'));
+  opt.classList.add('sel');
+  gs.querySelector('.gs-trigger span').textContent=opt.textContent;
+  gs.querySelector('.gs-pop').classList.remove('show');
+  gs.querySelector('.gs-trigger').classList.remove('open');
+}
+function gsVal(dataId){
+  const gs=document.querySelector(`.gs[data-id="${dataId}"]`);
+  if(!gs)return '';
+  const sel=gs.querySelector('.gs-opt.sel');
+  return sel?sel.dataset.val:'';
+}
+
+// ═══ Custom Glass Calendar ═══
+const calState={df:{year:0,month:0,val:'',open:false},dt:{year:0,month:0,val:'',open:false}};
+const WKDAYS=['日','一','二','三','四','五','六'];
+
+function toggleCal(id){calState[id].open?hideCal(id):showCal(id)}
+function showCal(id){
+  const s=calState[id];if(!s.year){const n=new Date();s.year=n.getFullYear();s.month=n.getMonth()}
+  s.open=true;renderCal(id);document.getElementById(id+'Cal').classList.add('show');document.getElementById(id+'Trig').classList.add('active');
+}
+function hideCal(id){calState[id].open=false;document.getElementById(id+'Cal').classList.remove('show');document.getElementById(id+'Trig').classList.remove('active')}
+
+function renderCal(id){
+  const s=calState[id],el=document.getElementById(id+'Cal');
+  const y=s.year,m=s.month,first=new Date(y,m,1),startDay=first.getDay(),daysInMonth=new Date(y,m+1,0).getDate();
+  const prevDays=new Date(y,m,0).getDate();
+  const today=new Date(),todayStr=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const mNames=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  let h=`<div class="cal-head">
+    <button onclick="event.stopPropagation();calNav('${id}',-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <span>${y}年 ${mNames[m]}</span>
+    <button onclick="event.stopPropagation();calNav('${id}',1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+  </div><div class="cal-grid">`;
+  WKDAYS.forEach(w=>{h+=`<div class="cal-wk">${w}</div>`});
+  // prev month padding
+  for(let i=startDay-1;i>=0;i--){const d=prevDays-i;h+=`<div class="cal-d other" onclick="event.stopPropagation();pickDate('${id}',${y},${m-1},${d})">${d}</div>`}
+  // current month
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let cls='cal-d';if(ds===todayStr)cls+=' today';if(ds===s.val)cls+=' sel';
+    h+=`<div class="${cls}" onclick="event.stopPropagation();pickDate('${id}',${y},${m},${d})">${d}</div>`;
+  }
+  // next month padding
+  const totalCells=startDay+daysInMonth;const rem=totalCells%7?7-totalCells%7:0;
+  for(let d=1;d<=rem;d++){h+=`<div class="cal-d other" onclick="event.stopPropagation();pickDate('${id}',${y},${m+1},${d})">${d}</div>`}
+  h+='</div>';el.innerHTML=h;
+}
+function calNav(id,dir){const s=calState[id];s.month+=dir;if(s.month>11){s.month=0;s.year++}if(s.month<0){s.month=11;s.year--}renderCal(id)}
+function pickDate(id,y,m,d){
+  const dt=new Date(y,m,d);const s=calState[id];
+  s.year=dt.getFullYear();s.month=dt.getMonth();
+  s.val=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  document.getElementById(id+'Label').textContent=s.val;
+  hideCal(id);loadStats();
+}
+
+// ═══ Upload ═══
+function initUpload(){
+  const u=document.getElementById('uploadArea'),inp=document.getElementById('imageInput');
+  u.addEventListener('click',()=>inp.click());
+  u.addEventListener('dragover',e=>{e.preventDefault();u.style.background='rgba(10,132,255,.06)';u.style.borderColor='rgba(10,132,255,.38)'});
+  u.addEventListener('dragleave',()=>{u.style.background='';u.style.borderColor=''});
+  u.addEventListener('drop',e=>{e.preventDefault();u.style.background='';u.style.borderColor='';if(e.dataTransfer.files.length){inp.files=e.dataTransfer.files;handleImg()}});
+}
+async function handleImg(){
+  const f=document.getElementById('imageInput').files;if(!f||!f.length)return;
+  const m=gsVal('modelSelect');
+  document.getElementById('loader').style.display='block';document.getElementById('results').style.display='none';dr=[];
+  try{for(let i=0;i<f.length;i++){document.getElementById('loaderTxt').textContent=`正在检测第 ${i+1}/${f.length} 张...`;const r=await det(f[i],m);if(r){dr.push(r);if(i===0){ci=0;showRes()}else updImg()}}if(!dr.length)throw new Error('检测失败')}
+  catch(e){document.getElementById('loader').style.display='none';alert(e.message)}
+}
+async function det(file,model){const fd=new FormData();fd.append('image',file);fd.append('model_type',model);try{const r=await fetch(U+'/detect',{method:'POST',body:fd});if(!r.ok)throw 0;const d=await r.json();return d.error?null:d}catch(e){return null}}
+function showRes(){document.getElementById('loader').style.display='none';document.getElementById('results').style.display='block';document.getElementById('uploadArea').style.display='none';updImg();loadStats()}
+function updImg(){
+  if(!dr.length)return;const c=dr[ci];document.getElementById('resImg').src=c.result_url;
+  document.getElementById('imgCtr').textContent=`${ci+1} / ${dr.length}`;
+  const d=c.detections||[],n=d.length,a=n?(d.reduce((s,x)=>s+x.score,0)/n*100).toFixed(1):0;
+  document.getElementById('resDC').textContent=n;document.getElementById('resAC').textContent=a+'%';
+  const s=document.getElementById('resSt');if(!n){s.className='badge badge-ok';s.textContent='合格'}else{s.className='badge badge-bad';s.textContent='不合格'}
+}
+function prevImg(){if(ci>0){ci--;updImg()}}
+function nextImg(){if(ci<dr.length-1){ci++;updImg()}}
+function expCur(){if(!dr.length)return;const a=document.createElement('a');a.href=dr[ci].result_url;a.download=`result_${ci+1}.jpg`;a.click()}
+function expAll(){if(!dr.length)return;const f=document.createElement('form');f.method='POST';f.action=U+'/api/export/batch';const i=document.createElement('input');i.type='hidden';i.name='file_ids';i.value=JSON.stringify(dr.map(r=>r.file_id));f.appendChild(i);document.body.appendChild(f);f.submit();document.body.removeChild(f)}
+function clrDet(){document.getElementById('imageInput').value='';document.getElementById('results').style.display='none';document.getElementById('uploadArea').style.display='';dr=[];ci=0}
+
+// ═══ Records ═══
+function loadRec(){
+  fetch(U+'/api/records').then(r=>r.json()).then(d=>{
+    ar=d.records||[];si=[];const el=document.getElementById('recList');
+    if(!ar.length){el.innerHTML='<div class="empty"><svg style="width:2em;height:2em;opacity:.16;margin:0 auto 8px;display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><p style="font-weight:500">暂无记录</p></div>';document.getElementById('delBtn').style.display='none';return}
+    el.innerHTML=ar.map(r=>`<div class="cd" style="margin-bottom:9px;padding:12px;display:grid;grid-template-columns:auto 68px 1fr auto;gap:11px;align-items:center">
+      <input type="checkbox" class="rc" value="${r.id}" onchange="updBatch()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--ac)">
+      <img src="${r.image_path}" style="width:68px;height:68px;object-fit:cover;border-radius:var(--sm)">
+      <div><div style="font-weight:600;color:var(--t1);font-size:.88em;margin-bottom:2px">${r.image_name}</div><div style="color:var(--t3);font-size:.78em">${r.created_at} · ${r.defect_count} 个缺陷</div></div>
+      <button class="bt bd" style="padding:5px 12px;font-size:.78em" onclick="delRec(${r.id})"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>删除</button>
+    </div>`).join('');
+  }).catch(()=>alert('加载失败'));
+}
+function selAll(){const c=document.querySelectorAll('.rc');const a=Array.from(c).every(x=>x.checked);c.forEach(x=>{x.checked=!a});updBatch()}
+function updBatch(){const c=document.querySelectorAll('.rc:checked');si=Array.from(c).map(x=>+x.value);const b=document.getElementById('delBtn');if(si.length){b.style.display='inline-flex';b.innerHTML=`<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> 删除 (${si.length})`}else b.style.display='none'}
+function batchDel(){if(!si.length||!confirm(`确定删除 ${si.length} 条记录？`))return;fetch(U+'/api/records/batch',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({record_ids:si})}).then(r=>r.json()).then(d=>{alert(d.message||'已删除');loadRec();loadStats()}).catch(()=>alert('失败'))}
+function delRec(id){if(!confirm('确定删除？'))return;fetch(U+`/api/records/${id}`,{method:'DELETE'}).then(()=>{loadRec();loadStats()}).catch(()=>alert('失败'))}
+
+// ═══ Statistics ═══
+function onRange(){const v=gsVal('sRange'),c=v==='custom';document.getElementById('dfWrap').style.display=c?'':'none';document.getElementById('dtWrap').style.display=c?'':'none';if(!c)loadStats()}
+function loadStats(){
+  const rng=gsVal('sRange')||'all';
+  const src=gsVal('sSrc')||'';
+  const p=new URLSearchParams();if(src)p.set('source',src);
+  if(rng==='today'){const t=new Date().toISOString().slice(0,10);p.set('date_from',t);p.set('date_to',t)}
+  else if(rng==='7d'){const d=new Date();d.setDate(d.getDate()-6);p.set('date_from',d.toISOString().slice(0,10));p.set('date_to',new Date().toISOString().slice(0,10))}
+  else if(rng==='30d'){const d=new Date();d.setDate(d.getDate()-29);p.set('date_from',d.toISOString().slice(0,10));p.set('date_to',new Date().toISOString().slice(0,10))}
+  else if(rng==='custom'){const f=calState.df.val,t=calState.dt.val;if(f)p.set('date_from',f);if(t)p.set('date_to',t)}
+  fetch(U+'/api/statistics?'+p.toString()).then(r=>r.json()).then(d=>{
+    document.getElementById('stTot').textContent=d.total_records;
+    document.getElementById('stDef').textContent=d.total_defects;
+    document.getElementById('stAvg').textContent=(d.average_confidence*100).toFixed(1)+'%';
+    document.getElementById('stRate').textContent=(d.defect_rate*100).toFixed(1)+'%';
+    const de=document.getElementById('distEl'),dist=d.defect_distribution||{},dk=Object.keys(dist);
+    if(!dk.length)de.innerHTML='<span style="color:var(--t3);font-size:.83em">暂无数据</span>';
+    else{const tot=dk.reduce((s,k)=>s+dist[k],0);de.innerHTML=dk.map(k=>`<div class="cd" style="padding:10px 15px;text-align:center;min-width:85px"><div style="font-size:1.3em;font-weight:700;color:var(--ac)">${dist[k]}</div><div style="font-size:.76em;color:var(--t2);font-weight:600">${k}</div><div style="font-size:.70em;color:var(--t3);margin-top:1px">${(dist[k]/tot*100).toFixed(0)}%</div></div>`).join('')}
+    const dl=document.getElementById('dayEl'),dy=d.daily_stats||[];
+    if(!dy.length)dl.innerHTML='<div style="color:var(--t3);font-size:.83em;padding:14px 0;text-align:center">暂无数据</div>';
+    else dl.innerHTML=dy.map(x=>{const rc=x.defect_rate>.5?'var(--bad)':x.defect_rate>0?'var(--warn)':'var(--ok)';return`<div class="cd" style="margin-bottom:8px;padding:11px 15px;display:grid;grid-template-columns:1fr repeat(3,auto);gap:16px;align-items:center"><div style="font-weight:600;color:var(--t1);font-size:.88em">${x.date}</div><div style="text-align:center"><div style="font-weight:700;color:var(--ac);font-size:1em">${x.count}</div><div style="font-size:.70em;color:var(--t3)">检测数</div></div><div style="text-align:center"><div style="font-weight:700;color:var(--t1);font-size:1em">${x.defects}</div><div style="font-size:.70em;color:var(--t3)">缺陷数</div></div><div style="text-align:center"><div style="font-weight:700;color:${rc};font-size:1em">${(x.defect_rate*100).toFixed(0)}%</div><div style="font-size:.70em;color:var(--t3)">缺陷率</div></div></div>`}).join('');
+  }).catch(()=>{});
+}
+
+// ═══ Tab ═══
+function go(e,t){
+  if(e){document.querySelectorAll('.nv-t a').forEach(a=>a.classList.remove('on'));e.target.closest('a').classList.add('on')}
+  document.querySelectorAll('.sc').forEach(s=>s.classList.remove('on'));document.getElementById(t).classList.add('on');
+  if(t==='records')loadRec();if(t==='stats')loadStats();if(t!=='realtime'&&rtOn)stopRt();
+}
+
+// ═══ Realtime ═══
+let rtOn=false,rtS=null,rtT=null,rtF=0,rtB=false;
+const DC=['#FF453A','#30D158','#0A84FF','#5AC8FA','#FF375F','#FF9F0A','#BF5AF2','#64D2FF','#8E8E93'];
+function toggleRt(){rtOn?stopRt():startRt()}
+async function startRt(){
+  try{rtS=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'environment'},audio:false});
+  const v=document.getElementById('rtVideo');v.srcObject=rtS;await v.play();
+  v.onloadedmetadata=()=>{const c=document.getElementById('rtCanvas');c.width=v.videoWidth;c.height=v.videoHeight};
+  rtOn=true;rtF=0;rtB=false;
+  document.getElementById('rtPh').style.display='none';document.getElementById('rtBadge').style.display='block';
+  document.getElementById('rtStartBtn').innerHTML='<svg class="i" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg> 停止监测';
+  document.getElementById('rtStartBtn').className='bt bd';
+  rtT=setInterval(capDet,parseInt(gsVal('rtFpsSelect')||'1000'));
+  }catch(e){alert('无法访问摄像头: '+e.message)}
+}
+function stopRt(){
+  rtOn=false;if(rtT){clearInterval(rtT);rtT=null}if(rtS){rtS.getTracks().forEach(t=>t.stop());rtS=null}
+  document.getElementById('rtVideo').srcObject=null;const c=document.getElementById('rtCanvas');c.getContext('2d').clearRect(0,0,c.width,c.height);
+  document.getElementById('rtPh').style.display='flex';document.getElementById('rtBadge').style.display='none';
+  document.getElementById('rtStartBtn').innerHTML='<svg class="i" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg> 启动监测';
+  document.getElementById('rtStartBtn').className='bt b1';
+}
+async function capDet(){
+  if(!rtOn||rtB)return;rtB=true;const v=document.getElementById('rtVideo');if(v.readyState<2){rtB=false;return}
+  const t=document.createElement('canvas');t.width=v.videoWidth;t.height=v.videoHeight;t.getContext('2d').drawImage(v,0,0);
+  const f=t.toDataURL('image/jpeg',.8),mt=gsVal('rtModelSelect')||'yolov8m',ct=parseFloat(gsVal('rtConfThreshold')||'0.5');
+  try{const r=await fetch(U+'/detect/frame',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({frame:f,model_type:mt})});
+  const d=await r.json(),det=(d.detections||[]).filter(x=>x.score>=ct);
+  drawOv(det,v.videoWidth,v.videoHeight);rtF++;
+  document.getElementById('rtFC').textContent=rtF;document.getElementById('rtDC').textContent=det.length;
+  document.getElementById('rtAC').textContent=det.length?(det.reduce((s,x)=>s+x.score,0)/det.length*100).toFixed(1)+'%':'0%';
+  const st=document.getElementById('rtSt');
+  if(!det.length){st.textContent='合格';st.className='badge badge-ok';document.getElementById('rtDot').style.background='var(--ok)'}
+  else{st.textContent='发现缺陷';st.className='badge badge-bad';document.getElementById('rtDot').style.background='var(--bad)'}
+  }catch(e){}finally{rtB=false}
+}
+function drawOv(det,vw,vh){
+  const c=document.getElementById('rtCanvas'),x=c.getContext('2d');
+  if(c.width!==vw||c.height!==vh){c.width=vw;c.height=vh}x.clearRect(0,0,c.width,c.height);
+  det.forEach(d=>{
+    const[x1,y1,x2,y2]=d.bbox,lb=d.label||'',sc=d.score||0;
+    let ci=0;if(lb.startsWith('class_'))ci=parseInt(lb.split('_')[1])||0;
+    const co=DC[ci%DC.length];x.strokeStyle=co;x.lineWidth=Math.max(2,Math.round(vw/400));
+    // rounded rect stroke
+    const bw=x2-x1,bh=y2-y1,br=4;
+    x.beginPath();x.moveTo(x1+br,y1);x.lineTo(x2-br,y1);x.quadraticCurveTo(x2,y1,x2,y1+br);x.lineTo(x2,y2-br);x.quadraticCurveTo(x2,y2,x2-br,y2);x.lineTo(x1+br,y2);x.quadraticCurveTo(x1,y2,x1,y2-br);x.lineTo(x1,y1+br);x.quadraticCurveTo(x1,y1,x1+br,y1);x.stroke();
+    const txt=`${lb} ${(sc*100).toFixed(0)}%`,fs=Math.max(12,Math.round(vw/70));
+    x.font=`600 ${fs}px -apple-system,sans-serif`;const tw=x.measureText(txt).width,th=fs+2;
+    // label bg rounded
+    const lx=x1,ly=y1-th-4,lw=tw+8,lh=th+3,lr=3;
+    x.fillStyle=co;x.beginPath();x.moveTo(lx+lr,ly);x.lineTo(lx+lw-lr,ly);x.quadraticCurveTo(lx+lw,ly,lx+lw,ly+lr);x.lineTo(lx+lw,ly+lh-lr);x.quadraticCurveTo(lx+lw,ly+lh,lx+lw-lr,ly+lh);x.lineTo(lx+lr,ly+lh);x.quadraticCurveTo(lx,ly+lh,lx,ly+lh-lr);x.lineTo(lx,ly+lr);x.quadraticCurveTo(lx,ly,lx+lr,ly);x.fill();
+    x.fillStyle='#fff';x.fillText(txt,x1+4,y1-5);
+  });
+}
+</script>
 </body>
 </html>
-

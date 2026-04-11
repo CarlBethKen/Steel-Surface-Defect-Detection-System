@@ -137,49 +137,80 @@ def delete_record(db: Session, record_id: int) -> bool:
     return False
 
 
-def get_statistics(db: Session) -> dict:
-    """获取检测统计信息"""
-    total_records = db.query(DetectionRecord).count()
+def get_statistics(db: Session, date_from: str = None, date_to: str = None, source: str = None) -> dict:
+    """获取检测统计信息，支持日期范围和来源筛选"""
+    from sqlalchemy import func, cast, Date
 
-    # 按模型统计
-    model_a_count = db.query(DetectionRecord).filter(
-        DetectionRecord.model_type == "A"
-    ).count()
-    model_b_count = db.query(DetectionRecord).filter(
-        DetectionRecord.model_type == "B"
-    ).count()
+    query = db.query(DetectionRecord)
 
-    # 缺陷总数
-    total_defects = db.query(DetectionRecord).with_entities(
-        DetectionRecord.defect_count
-    ).all()
-    total_defects_count = sum(d[0] for d in total_defects)
+    # 日期筛选
+    if date_from:
+        try:
+            dt_from = datetime.strptime(date_from, "%Y-%m-%d")
+            query = query.filter(DetectionRecord.created_at >= dt_from)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(DetectionRecord.created_at <= dt_to)
+        except ValueError:
+            pass
 
-    # 平均置信度
-    avg_confidence = db.query(DetectionRecord).with_entities(
-        DetectionRecord.confidence_avg
-    ).all()
-    avg_confidence_value = (
-        sum(d[0] for d in avg_confidence) / len(avg_confidence)
-        if avg_confidence
-        else 0.0
+    # 来源筛选
+    if source == "realtime":
+        query = query.filter(DetectionRecord.image_name.like("realtime_%"))
+    elif source == "upload":
+        query = query.filter(~DetectionRecord.image_name.like("realtime_%"))
+
+    records = query.all()
+    total_records = len(records)
+    total_defects = sum(r.defect_count for r in records)
+    avg_confidence = (
+        sum(r.confidence_avg for r in records) / total_records
+        if total_records else 0.0
+    )
+    defect_rate = (
+        sum(1 for r in records if r.defect_count > 0) / total_records
+        if total_records else 0.0
     )
 
-    # 各类型缺陷分布
-    all_records = db.query(DetectionRecord).all()
+    # 缺陷类型分布
     defect_types = {}
-    for record in all_records:
+    for record in records:
         detections = json.loads(record.defections) if record.defections else []
         for det in detections:
             label = det.get("label", "unknown")
             defect_types[label] = defect_types.get(label, 0) + 1
 
+    # 按日期分组统计
+    daily_stats = {}
+    for r in records:
+        day = r.created_at.strftime("%Y-%m-%d") if r.created_at else "unknown"
+        if day not in daily_stats:
+            daily_stats[day] = {"count": 0, "defects": 0, "has_defect": 0}
+        daily_stats[day]["count"] += 1
+        daily_stats[day]["defects"] += r.defect_count
+        if r.defect_count > 0:
+            daily_stats[day]["has_defect"] += 1
+
+    # 转为排序列表
+    daily_list = []
+    for day in sorted(daily_stats.keys(), reverse=True):
+        s = daily_stats[day]
+        daily_list.append({
+            "date": day,
+            "count": s["count"],
+            "defects": s["defects"],
+            "defect_rate": round(s["has_defect"] / s["count"], 3) if s["count"] else 0,
+        })
+
     return {
         "total_records": total_records,
-        "model_a_count": model_a_count,
-        "model_b_count": model_b_count,
-        "total_defects": total_defects_count,
-        "average_confidence": round(avg_confidence_value, 3),
+        "total_defects": total_defects,
+        "average_confidence": round(avg_confidence, 3),
+        "defect_rate": round(defect_rate, 3),
         "defect_distribution": defect_types,
+        "daily_stats": daily_list,
     }
 

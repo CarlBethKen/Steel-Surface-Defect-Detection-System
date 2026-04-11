@@ -425,18 +425,12 @@ def delete_record_api(record_id: int, db: Session = Depends(get_db)):
 # ==================== 统计分析 API ====================
 
 @app.get("/api/statistics")
-def get_stats(db: Session = Depends(get_db)):
-    """
-    获取检测统计信息
-
-    返回:
-        - JSON 格式的统计数据，包括：
-          - total_records: 总记录数
-          - model_a_count: 模型 A 使用次数
-          - model_b_count: 模型 B 使用次数
-          - total_defects: 检出缺陷总数
-          - average_confidence: 平均置信度
-          - defect_distribution: 缺陷类型分布
-    """
-    stats = get_statistics(db)
+def get_stats(
+    date_from: str = Query(None),
+    date_to: str = Query(None),
+    source: str = Query(None),
+    db: Session = Depends(get_db),
+):
+    """获取检测统计信息，支持日期范围和来源筛选"""
+    stats = get_statistics(db, date_from=date_from, date_to=date_to, source=source)
     return JSONResponse(stats)
