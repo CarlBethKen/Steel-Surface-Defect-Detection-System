@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+opencv-python
+numpy
+pillow
+torch
+sqlalchemy
+pydantic
+jinja2
+python-dateutil
