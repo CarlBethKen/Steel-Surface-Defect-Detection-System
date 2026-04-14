@@ -8,33 +8,20 @@ from typing import List, Dict, Any
 
 # 定义缺陷类型和对应颜色
 DEFECT_COLORS = {
-    "scratch": (0, 0, 255),        # 红色 - 划痕
-    "pit": (0, 255, 0),             # 绿色 - 坑洞
-    "patch": (255, 0, 0),           # 蓝色 - 补丁/斑点
-    "roll_mark": (0, 255, 255),     # 黄色 - 轧痕
-    "crack": (255, 0, 255),         # 洋红 - 裂纹
-    "oxide": (255, 165, 0),         # 橙色 - 氧化
-    "dent": (128, 0, 128),          # 紫色 - 凹陷
-    "corrosion": (0, 128, 128),     # 青色 - 腐蚀
-    "unknown": (128, 128, 128),     # 灰色 - 未知
+    "龟裂": (0, 0, 255),           # 红色
+    "夹杂": (0, 255, 0),           # 绿色
+    "斑块": (255, 0, 0),           # 蓝色
+    "麻面": (0, 255, 255),         # 黄色
+    "氧化铁皮": (255, 0, 255),     # 洋红
+    "划痕": (255, 165, 0),         # 橙色
+    "unknown": (128, 128, 128),     # 灰色
 }
 
 
 def _get_defect_color(label: str) -> tuple:
-    """根据缺陷标签获取颜色，支持 class_id 格式和文字标签"""
-    # 直接查找
+    """根据缺陷标签获取颜色"""
     if label in DEFECT_COLORS:
         return DEFECT_COLORS[label]
-
-    # 如果是 class_0, class_1 格式
-    if label.startswith("class_"):
-        try:
-            class_id = int(label.split("_")[1])
-            colors = list(DEFECT_COLORS.values())
-            return colors[class_id % len(colors)]
-        except:
-            pass
-
     return DEFECT_COLORS["unknown"]
 
 

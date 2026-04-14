@@ -4,6 +4,16 @@
 import os
 from typing import Dict, Any, List
 
+# 缺陷类别中文映射
+DEFECT_NAMES = {
+    0: "龟裂",
+    1: "夹杂",
+    2: "斑块",
+    3: "麻面",
+    4: "氧化铁皮",
+    5: "划痕",
+}
+
 
 def load_models(yolo_path: str = None) -> Dict[str, Any]:
     """
@@ -61,7 +71,7 @@ def run_infer(models: Dict[str, Any], image_input: Any, model_type: str = "yolov
                         coords = [float(x) for x in xyxy.tolist()]
                     except Exception:
                         coords = [0, 0, 0, 0]
-                label = f"class_{int(cls)}" if cls is not None else "object"
+                label = DEFECT_NAMES.get(int(cls), f"class_{int(cls)}") if cls is not None else "未知"
                 detection_list.append({
                     "label": label,
                     "score": float(conf) if conf is not None else 0.0,
