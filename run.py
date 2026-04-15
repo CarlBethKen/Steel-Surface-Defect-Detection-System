@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-钢铁缺陷检测系统 - 一键启动
-"""
 
 import sys
 import time
